@@ -4,6 +4,43 @@ from flask_login import LoginManager, UserMixin, login_user, logout_user, login_
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
 
+# Курси валют (статичні для MVP, можна підключити API)
+CURRENCY_RATES = {
+    'UAH': 1.0,
+    'USD': 42.5,
+    'EUR': 50.0,
+    'PLN': 10.5,
+    'GBP': 52.0,
+    'CHF': 48.0,
+    'CZK': 1.8,
+}
+
+CURRENCY_SYMBOLS = {
+    'UAH': '₴',
+    'USD': '$',
+    'EUR': '€',
+    'PLN': 'zł',
+    'GBP': '£',
+    'CHF': '₣',
+    'CZK': 'Kč',
+}
+
+def convert_to_uah(amount, from_currency):
+    """Конвертує суму з вказаної валюти в гривні"""
+    if from_currency not in CURRENCY_RATES:
+        return amount
+    return amount * CURRENCY_RATES[from_currency]
+
+def convert_from_uah(amount, to_currency):
+    """Конвертує суму з гривень у вказану валюту"""
+    if to_currency not in CURRENCY_RATES:
+        return amount
+    return amount / CURRENCY_RATES[to_currency]
+
+def format_currency(amount, currency):
+    """Форматує суму з символом валюти"""
+    symbol = CURRENCY_SYMBOLS.get(currency, currency)
+    return f"{amount:.2f} {symbol}"
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here-change-in-production'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///travel_planner.db'
@@ -53,6 +90,7 @@ class Trip(db.Model):
     start_date = db.Column(db.DateTime, nullable=False)
     end_date = db.Column(db.DateTime, nullable=False)
     budget = db.Column(db.Float, default=0.0)
+    currency = db.Column(db.String(3), default='UAH')
     created_at = db.Column(db.DateTime, default=datetime.now)
 
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
@@ -198,13 +236,304 @@ def logout():
 
 
 # Особистий кабінет
+# Dashboard з розширеною статистикою
 @app.route('/dashboard')
 @login_required
 def dashboard():
+    from datetime import datetime, date
+
+    # Отримуємо параметри пошуку та фільтрації
+    search_query = request.args.get('search', '').strip()
+    sort_by = request.args.get('sort', 'date_desc')
+    filter_status = request.args.get('status', 'all')
+
+    # Базовий запит
+    query = Trip.query.filter_by(user_id=current_user.id)
+
+    # Пошук по назві або напрямку
+    if search_query:
+        # Конвертуємо в нижній регістр для порівняння
+        all_user_trips = Trip.query.filter_by(user_id=current_user.id).all()
+        search_lower = search_query.lower()
+
+        filtered = []
+        for trip in all_user_trips:
+            if (search_lower in trip.title.lower() or
+                    search_lower in trip.destination.lower()):
+                filtered.append(trip)
+
+        # Створюємо query з filtered trips
+        if filtered:
+            trip_ids = [t.id for t in filtered]
+            query = Trip.query.filter(Trip.id.in_(trip_ids))
+        else:
+            # Якщо нічого не знайдено, повертаємо порожній результат
+            query = Trip.query.filter(Trip.id == -1)
+    else:
+        query = Trip.query.filter_by(user_id=current_user.id)
+
+    # Сортування
+    if sort_by == 'date_desc':
+        query = query.order_by(Trip.start_date.desc())
+    elif sort_by == 'date_asc':
+        query = query.order_by(Trip.start_date.asc())
+    elif sort_by == 'budget_desc':
+        query = query.order_by(Trip.budget.desc())
+    elif sort_by == 'budget_asc':
+        query = query.order_by(Trip.budget.asc())
+    elif sort_by == 'title':
+        query = query.order_by(Trip.title.asc())
+
+    all_trips = query.all()
+
+    # Фільтрація по статусу (майбутні/минулі)
+    today = date.today()
+
+    if filter_status == 'upcoming':
+        trips = [t for t in all_trips if
+                 (t.start_date.date() if isinstance(t.start_date, datetime) else t.start_date) >= today]
+    elif filter_status == 'past':
+        trips = [t for t in all_trips if
+                 (t.end_date.date() if isinstance(t.end_date, datetime) else t.end_date) < today]
+    else:
+        trips = all_trips
+
+    # Загальна статистика
+    total_trips = len(trips)
+
+    # Витрати
+    total_spent = 0
+    total_budget = 0
+    for trip in trips:
+        activities = Activity.query.filter_by(trip_id=trip.id).all()
+        accommodations = Accommodation.query.filter_by(trip_id=trip.id).all()
+        trip_spent = sum(a.cost for a in activities) + sum(acc.total_price for acc in accommodations)
+        total_spent += trip_spent
+        total_budget += trip.budget
+
+    # Кількість днів подорожей
+    total_days = 0
+    for trip in trips:
+        days = (trip.end_date - trip.start_date).days + 1
+        total_days += days
+
+    # Відвідані країни та міста
+    destinations = [trip.destination for trip in trips]
+    unique_destinations = len(set(destinations))
+
+    # Активності
+    all_activities = Activity.query.join(Trip).filter(Trip.user_id == current_user.id).all()
+    total_activities = len(all_activities)
+    completed_activities = len([a for a in all_activities if a.completed])
+
+    # Готелі
+    all_accommodations = Accommodation.query.join(Trip).filter(Trip.user_id == current_user.id).all()
+    total_accommodations = len(all_accommodations)
+
+    # Майбутні поїздки
+    from datetime import datetime, date
+    today = date.today()
+    upcoming_trips = []
+    past_trips = []
+    for trip in trips:
+        # Конвертуємо datetime в date якщо потрібно
+        start = trip.start_date.date() if isinstance(trip.start_date, datetime) else trip.start_date
+        end = trip.end_date.date() if isinstance(trip.end_date, datetime) else trip.end_date
+
+        if start >= today:
+            upcoming_trips.append(trip)
+        elif end < today:
+            past_trips.append(trip)
+
+    # Топ-5 напрямків
+    destination_count = {}
+    for trip in trips:
+        if trip.destination in destination_count:
+            destination_count[trip.destination] += 1
+        else:
+            destination_count[trip.destination] = 1
+
+    top_destinations = sorted(destination_count.items(), key=lambda x: x[1], reverse=True)[:5]
+
+    # Витрати по місяцях (останні 6 місяців)
+    monthly_expenses = {}
+    for trip in trips:
+        activities = Activity.query.filter_by(trip_id=trip.id).all()
+        accommodations = Accommodation.query.filter_by(trip_id=trip.id).all()
+
+        for activity in activities:
+            month_key = activity.date.strftime('%Y-%m')
+            if month_key in monthly_expenses:
+                monthly_expenses[month_key] += activity.cost
+            else:
+                monthly_expenses[month_key] = activity.cost
+
+        for acc in accommodations:
+            month_key = acc.check_in.strftime('%Y-%m')
+            if month_key in monthly_expenses:
+                monthly_expenses[month_key] += acc.total_price
+            else:
+                monthly_expenses[month_key] = acc.total_price
+
+    # Сортуємо по датах
+    sorted_months = sorted(monthly_expenses.items())[-6:]
+
+    # Форматуємо назви місяців
+    month_names = {
+        '01': 'Січ', '02': 'Лют', '03': 'Бер', '04': 'Кві',
+        '05': 'Тра', '06': 'Чер', '07': 'Лип', '08': 'Сер',
+        '09': 'Вер', '10': 'Жов', '11': 'Лис', '12': 'Гру'
+    }
+
+    monthly_data = []
+    for month_key, amount in sorted_months:
+        year, month = month_key.split('-')
+        month_label = f"{month_names[month]} {year}"
+        monthly_data.append({'month': month_label, 'amount': amount})
+
+    return render_template('dashboard.html',
+                           trips=trips,
+                           total_trips=total_trips,
+                           total_spent=total_spent,
+                           total_budget=total_budget,
+                           total_days=total_days,
+                           unique_destinations=unique_destinations,
+                           total_activities=total_activities,
+                           completed_activities=completed_activities,
+                           total_accommodations=total_accommodations,
+                           upcoming_trips=upcoming_trips,
+                           past_trips=past_trips,
+                           top_destinations=top_destinations,
+                           monthly_data=monthly_data,
+                           today=today,
+                           search_query=search_query,
+                           sort_by=sort_by,
+                           filter_status=filter_status)
+
+
+# Мої поїздки (окрема сторінка)
+@app.route('/my-trips')
+@login_required
+def my_trips():
+    from datetime import datetime, date
+
+    # Отримуємо параметри пошуку та фільтрації
+    search_query = request.args.get('search', '').strip()
+    sort_by = request.args.get('sort', 'date_desc')
+    filter_status = request.args.get('status', 'all')
+
+    # Отримуємо всі поїздки користувача
+    all_user_trips = Trip.query.filter_by(user_id=current_user.id).all()
+
+    # Пошук
+    if search_query:
+        search_lower = search_query.lower()
+        all_user_trips = [
+            trip for trip in all_user_trips
+            if search_lower in trip.title.lower() or
+               search_lower in trip.destination.lower()
+        ]
+
+    # Сортування
+    if sort_by == 'date_desc':
+        all_user_trips.sort(key=lambda x: x.start_date, reverse=True)
+    elif sort_by == 'date_asc':
+        all_user_trips.sort(key=lambda x: x.start_date)
+    elif sort_by == 'budget_desc':
+        all_user_trips.sort(key=lambda x: x.budget, reverse=True)
+    elif sort_by == 'budget_asc':
+        all_user_trips.sort(key=lambda x: x.budget)
+    elif sort_by == 'title':
+        all_user_trips.sort(key=lambda x: x.title.lower())
+
+    # Фільтрація по статусу
+    today = date.today()
+
+    if filter_status == 'upcoming':
+        trips = [t for t in all_user_trips if
+                 (t.start_date.date() if isinstance(t.start_date, datetime) else t.start_date) >= today]
+    elif filter_status == 'past':
+        trips = [t for t in all_user_trips if
+                 (t.end_date.date() if isinstance(t.end_date, datetime) else t.end_date) < today]
+    else:
+        trips = all_user_trips
+
+    return render_template('my_trips.html',
+                           trips=trips,
+                           today=today,
+                           search_query=search_query,
+                           sort_by=sort_by,
+                           filter_status=filter_status)
+# Календар подорожей
+@app.route('/calendar')
+@login_required
+def trip_calendar():
+    from datetime import datetime, date, timedelta
+    import calendar as cal
+
+    # Отримуємо поточний місяць та рік
+    year = int(request.args.get('year', datetime.now().year))
+    month = int(request.args.get('month', datetime.now().month))
+
+    # Отримуємо всі поїздки користувача
     trips = Trip.query.filter_by(user_id=current_user.id).all()
-    return render_template('dashboard.html', trips=trips)
 
+    # Створюємо календар
+    month_calendar = cal.monthcalendar(year, month)
+    month_name = cal.month_name[month]
 
+    # Знаходимо поїздки для кожного дня місяця
+    trips_by_date = {}
+    for trip in trips:
+        start = trip.start_date.date() if isinstance(trip.start_date, datetime) else trip.start_date
+        end = trip.end_date.date() if isinstance(trip.end_date, datetime) else trip.end_date
+
+        # Додаємо поїздку до всіх днів між start та end
+        current_date = start
+        while current_date <= end:
+            if current_date.year == year and current_date.month == month:
+                date_key = current_date.day
+                if date_key not in trips_by_date:
+                    trips_by_date[date_key] = []
+                trips_by_date[date_key].append(trip)
+            current_date += timedelta(days=1)
+
+    # Навігація по місяцях
+    prev_month = month - 1 if month > 1 else 12
+    prev_year = year if month > 1 else year - 1
+    next_month = month + 1 if month < 12 else 1
+    next_year = year if month < 12 else year + 1
+
+    # Поточна дата
+    today = date.today()
+
+    # Статистика місяця
+    month_trips = [t for t in trips if
+                   (t.start_date.date() if isinstance(t.start_date, datetime) else t.start_date).year == year and
+                   (t.start_date.date() if isinstance(t.start_date, datetime) else t.start_date).month == month]
+
+    return render_template('calendar.html',
+                           year=year,
+                           month=month,
+                           month_name=month_name,
+                           month_calendar=month_calendar,
+                           trips_by_date=trips_by_date,
+                           prev_month=prev_month,
+                           prev_year=prev_year,
+                           next_month=next_month,
+                           next_year=next_year,
+                           today=today,
+                           month_trips=month_trips,
+                           all_trips=trips)
+
+# Конвертер валют
+@app.route('/converter')
+@login_required
+def currency_converter():
+    return render_template('currency_converter.html',
+                          currencies=CURRENCY_RATES.keys(),
+                          currency_rates=CURRENCY_RATES,
+                          currency_symbols=CURRENCY_SYMBOLS)
 # Створення поїздки
 @app.route('/trip/new', methods=['GET', 'POST'])
 @login_required
@@ -215,6 +544,7 @@ def new_trip():
         start_date_str = request.form.get('start_date')
         end_date_str = request.form.get('end_date')
         budget_str = request.form.get('budget', '0')
+        currency = request.form.get('currency', 'UAH')
 
         # Серверна валідація
         if not title or not destination:
@@ -245,6 +575,7 @@ def new_trip():
             start_date=start_date,
             end_date=end_date,
             budget=budget,
+            currency=currency,
             user_id=current_user.id
         )
 
@@ -254,18 +585,38 @@ def new_trip():
         flash('Поїздку створено!', 'success')
         return redirect(url_for('dashboard'))
 
+    return render_template('new_trip.html',
+                           currencies=CURRENCY_RATES.keys(),
+                           currency_symbols=CURRENCY_SYMBOLS)
+
     return render_template('trip.html')
 
 
-# Перегляд поїздки
 @app.route('/trip/<int:trip_id>')
 @login_required
 def view_trip(trip_id):
     trip = Trip.query.get_or_404(trip_id)
+
     if trip.user_id != current_user.id:
         flash('У вас немає доступу до цієї поїздки', 'danger')
         return redirect(url_for('dashboard'))
-    return render_template('trip_view.html', trip=trip)
+
+    # Групуємо активності по днях
+    from collections import defaultdict
+    activities_by_day = defaultdict(list)
+
+    for activity in trip.activities:
+        activity_date = activity.date.date() if hasattr(activity.date, 'date') else activity.date
+        activities_by_day[activity_date].append(activity)
+
+    # Сортуємо дати
+    activities_by_day = dict(sorted(activities_by_day.items()))
+
+    return render_template('trip_view.html',
+                           trip=trip,
+                           activities_by_day=activities_by_day,
+                           currency_rates=CURRENCY_RATES,
+                           currency_symbols=CURRENCY_SYMBOLS)
 
 
 # Редагування поїздки
@@ -588,6 +939,7 @@ def trip_statistics(trip_id):
                            activities_count=len(activities),
                            completed_count=completed_activities,
                            accommodations_count=len(accommodations))
+
 
 
 # Packing List - перегляд

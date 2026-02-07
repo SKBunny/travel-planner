@@ -1,70 +1,353 @@
 {% extends "base.html" %}
 
-{% block title %}Мої поїздки - Travel Planner{% endblock %}
+{% block title %}Dashboard - Travel Planner{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h2>Мої поїздки</h2>
-        <p class="text-muted">Вітаємо, {{ current_user.username }}! 👋</p>
+<div class="dashboard-header mb-5">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h1 class="mb-2">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </h1>
+            <p class="text-muted mb-0">Вітаємо, {{ current_user.username }}! Ось ваша статистика подорожей</p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <a href="{{ url_for('new_trip') }}" class="btn btn-primary btn-lg">
+                <i class="bi bi-plus-circle"></i> Нова поїздка
+            </a>
+        </div>
     </div>
-    <a href="{{ url_for('new_trip') }}" class="btn btn-primary btn-lg">
-        <i class="bi bi-plus-circle"></i> Нова поїздка
-    </a>
 </div>
 
-{% if trips %}
-    <div class="row">
-        {% for trip in trips %}
-        <div class="col-md-6 col-lg-4 mb-4">
-            <div class="card h-100 trip-card">
-                <div class="card-body">
-                    <h5 class="card-title">{{ trip.title }}</h5>
-                    <h6 class="card-subtitle mb-3 text-muted">
-                        <i class="bi bi-geo-alt"></i> {{ trip.destination }}
-                    </h6>
+<!-- Основна статистика -->
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card text-white" style="background: #667eea;">
+            <div class="card-body text-center">
+                <i class="bi bi-suitcase-lg stat-icon"></i>
+                <h2 class="mb-2">{{ total_trips }}</h2>
+                <p class="mb-0">{{ total_trips|plural('Поїздка', 'Поїздки', 'Поїздок') }}</p>
+            </div>
+        </div>
+    </div>
 
-                    <div class="trip-info">
-                        <p class="mb-2">
-                            <i class="bi bi-calendar-range"></i>
-                            <small>{{ trip.start_date.strftime('%d.%m.%Y') }} - {{ trip.end_date.strftime('%d.%m.%Y') }}</small>
-                        </p>
-                        <p class="mb-2">
-                            <i class="bi bi-hourglass-split"></i>
-                            <small>{{ (trip.end_date - trip.start_date).days + 1 }} днів</small>
-                        </p>
-                        <p class="mb-3">
-                            <i class="bi bi-wallet2"></i>
-                            <strong>{{ "%.0f"|format(trip.budget) }} грн</strong>
-                        </p>
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card text-white" style="background: #f56565;">
+            <div class="card-body text-center">
+                <i class="bi bi-cash-stack stat-icon"></i>
+                <h2 class="mb-2">{{ "%.0f"|format(total_spent) }}</h2>
+                <p class="mb-0">Витрачено грн</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card text-white" style="background: #4299e1;">
+            <div class="card-body text-center">
+                <i class="bi bi-calendar-check stat-icon"></i>
+                <h2 class="mb-2">{{ total_days }}</h2>
+                <p class="mb-0">{{ total_days|plural('День', 'Дні', 'Днів') }} подорожей</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card stat-card text-white" style="background: #ed8936;">
+            <div class="card-body text-center">
+                <i class="bi bi-geo-alt stat-icon"></i>
+                <h2 class="mb-2">{{ unique_destinations }}</h2>
+                <p class="mb-0">{{ unique_destinations|plural('Напрямок', 'Напрямки', 'Напрямків') }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Додаткова статистика -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card shadow-sm" id="trips-section">
+            <div class="card-body">
+                <h6 class="text-muted mb-3"><i class="bi bi-list-check"></i> Активності</h6>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h3 class="mb-0">{{ total_activities }}</h3>
+                        <small class="text-muted">Всього</small>
                     </div>
-
-                    <div class="d-flex gap-2">
-                        <a href="{{ url_for('view_trip', trip_id=trip.id) }}" class="btn btn-sm btn-primary flex-grow-1">
-                            Переглянути
-                        </a>
-                        <a href="{{ url_for('edit_trip', trip_id=trip.id) }}" class="btn btn-sm btn-outline-warning">
-                            ✏️
-                        </a>
+                    <div class="text-end">
+                        <h4 class="mb-0 text-success">{{ completed_activities }}</h4>
+                        <small class="text-muted">Виконано</small>
                     </div>
                 </div>
-                <div class="card-footer text-muted">
-                    <small>Створено: {{ trip.created_at.strftime('%d.%m.%Y') }}</small>
+                <div class="progress mt-3" style="height: 8px;">
+                    <div class="progress-bar bg-success" style="width: {{ (completed_activities / total_activities * 100) if total_activities > 0 else 0 }}%"></div>
                 </div>
             </div>
         </div>
-        {% endfor %}
     </div>
-{% else %}
-    <div class="text-center py-5">
-        <div class="mb-4">
-            <i class="bi bi-suitcase" style="font-size: 4rem; color: #ccc;"></i>
+
+    <div class="col-md-4 mb-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted mb-3"><i class="bi bi-building"></i> Проживання</h6>
+                <h3 class="mb-2">{{ total_accommodations }}</h3>
+                <p class="text-muted mb-0">Забронованих готелів</p>
+            </div>
         </div>
-        <h3 class="text-muted">У вас поки немає поїздок</h3>
-        <p class="text-muted mb-4">Створіть свою першу подорож і почніть планування!</p>
-        <a href="{{ url_for('new_trip') }}" class="btn btn-primary btn-lg">
-            <i class="bi bi-plus-circle"></i> Створити першу поїздку
-        </a>
     </div>
+
+    <div class="col-md-4 mb-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h6 class="text-muted mb-3"><i class="bi bi-percent"></i> Бюджет</h6>
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <small class="text-muted">Використано:</small>
+                        <h5 class="mb-0">{{ "%.1f"|format((total_spent / total_budget * 100) if total_budget > 0 else 0) }}%</h5>
+                    </div>
+                    <div class="text-end">
+                        <small class="text-muted">Загальний:</small>
+                        <h5 class="mb-0">{{ "%.0f"|format(total_budget) }} грн</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <!-- Графік витрат по місяцях -->
+    <div class="col-lg-8 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-graph-up"></i> Витрати по місяцях</h5>
+            </div>
+            <div class="card-body">
+                {% if monthly_data %}
+                    <canvas id="expensesChart" height="80"></canvas>
+                {% else %}
+                    <p class="text-muted text-center py-5 mb-0">Статистика витрат з'явиться після додавання поїздок</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Топ напрямків -->
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-star-fill"></i> Топ напрямків</h5>
+            </div>
+            <div class="card-body">
+                {% if top_destinations %}
+                    <ul class="list-unstyled mb-0">
+                        {% for destination, count in top_destinations %}
+                            <li class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold">{{ destination }}</span>
+                                    <span class="badge bg-primary rounded-pill">{{ count }}</span>
+                                </div>
+                                <div class="progress mt-1" style="height: 6px;">
+                                    <div class="progress-bar" style="width: {{ (count / total_trips * 100) }}%"></div>
+                                </div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted text-center mb-0">Напрямки з'являться після створення поїздок</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Майбутні поїздки -->
+{% if upcoming_trips %}
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="bi bi-calendar-event"></i> Майбутні поїздки ({{ upcoming_trips|length }})</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for trip in upcoming_trips[:3] %}
+                <div class="col-md-4 mb-3">
+                    <div class="card trip-card">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ trip.title }}</h5>
+                            <p class="text-muted mb-2">
+                                <i class="bi bi-geo-alt"></i> {{ trip.destination }}
+                            </p>
+                            <p class="text-muted mb-2">
+                                <i class="bi bi-calendar"></i>
+                                {{ trip.start_date.strftime('%d.%m.%Y') }} - {{ trip.end_date.strftime('%d.%m.%Y') }}
+                            </p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                {% set start = trip.start_date.date() if trip.start_date.__class__.__name__ == 'datetime' else trip.start_date %}
+                                {% set trip_start = trip.start_date.date() if trip.start_date.__class__.__name__ == 'datetime' else trip.start_date %}
+                                <span class="badge bg-info">{{ (trip_start - today).days }} днів</span>
+                                <a href="{{ url_for('view_trip', trip_id=trip.id) }}" class="btn btn-sm btn-primary">Відкрити</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
 {% endif %}
+
+<!-- Всі поїздки -->
+<div class="card shadow-sm">
+    <div class="card-header bg-light">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0"><i class="bi bi-list"></i> Всі поїздки ({{ trips|length }})</h5>
+        </div>
+
+        <!-- Пошук та фільтри -->
+        <form method="GET" action="{{ url_for('dashboard') }}" class="row g-3">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" class="form-control" name="search" placeholder="Пошук по назві або напрямку..." value="{{ search_query }}">
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <select class="form-select" name="status">
+                    <option value="all" {% if filter_status == 'all' %}selected{% endif %}>Всі поїздки</option>
+                    <option value="upcoming" {% if filter_status == 'upcoming' %}selected{% endif %}>Майбутні</option>
+                    <option value="past" {% if filter_status == 'past' %}selected{% endif %}>Минулі</option>
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <select class="form-select" name="sort">
+                    <option value="date_desc" {% if sort_by == 'date_desc' %}selected{% endif %}>Дата ↓ (новіші)</option>
+                    <option value="date_asc" {% if sort_by == 'date_asc' %}selected{% endif %}>Дата ↑ (старіші)</option>
+                    <option value="budget_desc" {% if sort_by == 'budget_desc' %}selected{% endif %}>Бюджет ↓</option>
+                    <option value="budget_asc" {% if sort_by == 'budget_asc' %}selected{% endif %}>Бюджет ↑</option>
+                    <option value="title" {% if sort_by == 'title' %}selected{% endif %}>За назвою А-Я</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-grow-1">
+                        <i class="bi bi-funnel"></i> Фільтр
+                    </button>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary" title="Скинути">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="card-body">
+        {% if trips %}
+            <div class="row" id="tripsContainer">
+               {% for trip in trips %}
+                    {% set trip_start = trip.start_date.date() if trip.start_date.__class__.__name__ == 'datetime' else trip.start_date %}
+                    {% set is_upcoming = trip_start >= today %}
+                    <div class="col-md-6 col-lg-4 mb-4 trip-item {{ 'upcoming' if is_upcoming else 'past' }}">
+                        <div class="card trip-card h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <h5 class="card-title mb-0">{{ trip.title }}</h5>
+                                    {% if is_upcoming %}
+                                        <span class="badge bg-success">Майбутня</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Минула</span>
+                                    {% endif %}
+                                </div>
+
+                                <p class="trip-info mb-2">
+                                    <i class="bi bi-geo-alt-fill"></i> {{ trip.destination }}
+                                </p>
+                                <p class="trip-info mb-2">
+                                    <i class="bi bi-calendar-range"></i>
+                                    {{ trip.start_date.strftime('%d.%m.%Y') }} - {{ trip.end_date.strftime('%d.%m.%Y') }}
+                                </p>
+                                <p class="trip-info mb-3">
+                                    <i class="bi bi-wallet2"></i> Бюджет: {{ trip.budget }} грн
+                                </p>
+
+                                <div class="d-grid gap-2">
+                                    <a href="{{ url_for('view_trip', trip_id=trip.id) }}" class="btn btn-primary btn-sm">
+                                        Відкрити поїздку
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-inbox" style="font-size: 4rem; color: #cbd5e0;"></i>
+                <h4 class="mt-3 mb-2">Поїздок ще немає</h4>
+                <p class="text-muted mb-4">Створіть свою першу поїздку та почніть планувати незабутню подорож!</p>
+                <a href="{{ url_for('new_trip') }}" class="btn btn-primary btn-lg">
+                    <i class="bi bi-plus-circle"></i> Створити поїздку
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Chart.js Script -->
+{% if monthly_data %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+    const ctx = document.getElementById('expensesChart').getContext('2d');
+    const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ monthly_data|map(attribute='month')|list|tojson }},
+            datasets: [{
+                label: 'Витрати (грн)',
+                data: {{ monthly_data|map(attribute='amount')|list|tojson }},
+                borderColor: 'rgb(102, 126, 234)',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return value + ' грн';
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endif %}
+<script>
+    // Прокрутка до результатів після фільтрації
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const hasFilters = urlParams.has('search') || urlParams.has('status') || urlParams.has('sort');
+
+        if (hasFilters) {
+            setTimeout(function() {
+                const tripsSection = document.getElementById('trips-section');
+                if (tripsSection) {
+                    tripsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 100);
+        }
+    });
+</script>
+
 {% endblock %}

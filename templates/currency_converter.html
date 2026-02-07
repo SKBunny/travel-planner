@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Конвертер валют - Travel Planner{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card shadow-lg">
+            <div class="card-header bg-primary text-white text-center">
+                <h3 class="mb-0"><i class="bi bi-currency-exchange"></i> Конвертер валют</h3>
+            </div>
+            <div class="card-body p-4">
+                <form id="converterForm">
+                    <!-- Сума для конвертації -->
+                    <div class="mb-4">
+                        <label for="amount" class="form-label fw-bold">Сума</label>
+                        <input type="number" class="form-control form-control-lg" id="amount" value="100" step="0.01" required>
+                    </div>
+
+                    <!-- З якої валюти -->
+                    <div class="mb-4">
+                        <label for="fromCurrency" class="form-label fw-bold">З валюти</label>
+                        <select class="form-select form-select-lg" id="fromCurrency">
+                            {% for curr in currencies %}
+                                <option value="{{ curr }}" {% if curr == 'USD' %}selected{% endif %}>
+                                    {{ curr }} ({{ currency_symbols[curr] }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Іконка обміну -->
+                    <div class="text-center mb-4">
+                        <button type="button" class="btn btn-light btn-lg" onclick="swapCurrencies()" title="Поміняти місцями">
+                            <i class="bi bi-arrow-down-up"></i>
+                        </button>
+                    </div>
+
+                    <!-- В яку валюту -->
+                    <div class="mb-4">
+                        <label for="toCurrency" class="form-label fw-bold">В валюту</label>
+                        <select class="form-select form-select-lg" id="toCurrency">
+                            {% for curr in currencies %}
+                                <option value="{{ curr }}" {% if curr == 'UAH' %}selected{% endif %}>
+                                    {{ curr }} ({{ currency_symbols[curr] }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Результат -->
+                    <div class="result-box p-4 bg-light rounded-3 text-center">
+                        <h2 class="mb-0" id="result">--</h2>
+                        <p class="text-muted mb-0 mt-2" id="rate">--</p>
+                    </div>
+                </form>
+
+                <!-- Таблиця курсів -->
+                <div class="mt-5">
+                    <h5 class="mb-3"><i class="bi bi-table"></i> Курси валют до гривні</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Валюта</th>
+                                    <th>Символ</th>
+                                    <th class="text-end">Курс</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for curr, rate in currency_rates.items() %}
+                                    {% if curr != 'UAH' %}
+                                    <tr>
+                                        <td><strong>{{ curr }}</strong></td>
+                                        <td>{{ currency_symbols[curr] }}</td>
+                                        <td class="text-end">{{ "%.2f"|format(rate) }} ₴</td>
+                                    </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="text-muted small mt-3">
+                        <i class="bi bi-info-circle"></i> 
+                        Курси приблизні, для точних розрахунків використовуйте офіційні джерела
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const rates = {{ currency_rates|tojson }};
+    const symbols = {{ currency_symbols|tojson }};
+
+    function convert() {
+        const amount = parseFloat(document.getElementById('amount').value) || 0;
+        const from = document.getElementById('fromCurrency').value;
+        const to = document.getElementById('toCurrency').value;
+
+        // Конвертація через UAH
+        const amountInUAH = amount * rates[from];
+        const result = amountInUAH / rates[to];
+
+        // Відображення результату
+        document.getElementById('result').textContent = 
+            `${result.toFixed(2)} ${symbols[to]}`;
+
+        // Курс
+        const rate = rates[from] / rates[to];
+        document.getElementById('rate').textContent = 
+            `1 ${symbols[from]} = ${rate.toFixed(4)} ${symbols[to]}`;
+    }
+
+    function swapCurrencies() {
+        const from = document.getElementById('fromCurrency');
+        const to = document.getElementById('toCurrency');
+        const temp = from.value;
+        from.value = to.value;
+        to.value = temp;
+        convert();
+    }
+
+    // Автоматична конвертація при зміні
+    document.getElementById('amount').addEventListener('input', convert);
+    document.getElementById('fromCurrency').addEventListener('change', convert);
+    document.getElementById('toCurrency').addEventListener('change', convert);
+
+    // Початкова конвертація
+    convert();
+</script>
+
+<style>
+    .result-box {
+        border: 2px solid #667eea;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .result-box h2 {
+        color: #667eea;
+        font-weight: 700;
+        font-size: 2.5rem;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+    }
+</style>
+
+{% endblock %}

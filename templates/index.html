@@ -1,115 +1,121 @@
 {% extends "base.html" %}
 
-{% block title %}Головна - Travel Planner{% endblock %}
+{% block title %}Travel Planner - Плануйте свої подорожі легко{% endblock %}
 
 {% block content %}
-<div class="hero-section text-center py-5 mb-5">
+<!-- Hero Section -->
+<div class="hero-section text-center">
     <div class="hero-content">
-        <h1 class="display-3 fw-bold mb-3">Плануйте свої подорожі легко</h1>
+        <h1 class="display-4 fw-bold mb-4">Плануйте свої подорожі легко</h1>
         <p class="lead mb-4">Всі ваші поїздки в одному місці. Організуйте, контролюйте бюджет, насолоджуйтесь!</p>
-        {% if not current_user.is_authenticated %}
-            <div class="mt-4">
-                <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg me-2 pulse-button">
-                    🚀 Розпочати безкоштовно
+
+        <div class="d-flex gap-3 justify-content-center flex-wrap">
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('my_trips') }}" class="btn btn-light btn-lg px-5">
+                    <i class="bi bi-suitcase-lg"></i> Мої поїздки
                 </a>
-                <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-lg">
+                <a href="{{ url_for('new_trip') }}" class="btn btn-outline-light btn-lg px-5">
+                    <i class="bi bi-plus-circle"></i> Нова подорож
+                </a>
+            {% else %}
+                <a href="{{ url_for('register') }}" class="btn btn-light btn-lg px-5 pulse-button">
+                    <i class="bi bi-rocket-takeoff"></i> Розпочати безкоштовно
+                </a>
+                <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-lg px-5">
                     Увійти
                 </a>
-            </div>
-        {% else %}
-            <div class="mt-4">
-                <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-lg pulse-button">
-                    📋 Мої поїздки
-                </a>
-                <a href="{{ url_for('new_trip') }}" class="btn btn-outline-light btn-lg">
-                    ➕ Нова подорож
-                </a>
-            </div>
-        {% endif %}
-    </div>
-</div>
-
-<div class="container mb-5">
-    <div class="row text-center mb-5">
-        <div class="col-12">
-            <h2 class="mb-4">Чому обирають Travel Planner?</h2>
-            <p class="text-muted">Професійні інструменти для ідеального планування</p>
-        </div>
-    </div>
-
-    <div class="row g-4">
-        <div class="col-md-4">
-            <div class="feature-card card h-100 text-center p-4">
-                <div class="feature-icon">📅</div>
-                <h3 class="h5 mb-3">Детальне планування</h3>
-                <p class="text-muted">Створюйте маршрути по днях, додавайте активності з часом та локацією</p>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="feature-card card h-100 text-center p-4">
-                <div class="feature-icon">💰</div>
-                <h3 class="h5 mb-3">Контроль бюджету</h3>
-                <p class="text-muted">Відстежуйте витрати по категоріях, дивіться детальну статистику</p>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="feature-card card h-100 text-center p-4">
-                <div class="feature-icon">✓</div>
-                <h3 class="h5 mb-3">Трекінг прогресу</h3>
-                <p class="text-muted">Позначайте виконані активності, слідкуйте за прогресом подорожі</p>
-            </div>
+            {% endif %}
         </div>
     </div>
 </div>
 
-<div class="features-section bg-light py-5 mb-5">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-md-6 mb-4 mb-md-0">
-                <h2 class="mb-4">Все для вашої подорожі</h2>
-                <ul class="feature-list">
-                    <li><i class="bi bi-check-circle-fill text-success"></i> Необмежена кількість поїздок</li>
-                    <li><i class="bi bi-check-circle-fill text-success"></i> 6 категорій активностей</li>
-                    <li><i class="bi bi-check-circle-fill text-success"></i> Статистика та аналітика</li>
-                    <li><i class="bi bi-check-circle-fill text-success"></i> Адаптивний дизайн</li>
-                    <li><i class="bi bi-check-circle-fill text-success"></i> Безпечне зберігання даних</li>
-                </ul>
-            </div>
-            <div class="col-md-6 text-center">
-                <div class="stats-showcase">
-                    <div class="stat-item">
-                        <h3 class="text-primary">100%</h3>
-                        <p>Безкоштовно</p>
-                    </div>
-                    <div class="stat-item">
-                        <h3 class="text-success">∞</h3>
-                        <p>Поїздок</p>
-                    </div>
-                    <div class="stat-item">
-                        <h3 class="text-info">24/7</h3>
-                        <p>Доступ</p>
-                    </div>
+<!-- Features Section -->
+<h2 class="text-center mb-5">Чому обирають Travel Planner?</h2>
+<div class="row g-4 mb-5">
+    <div class="col-md-4">
+        <div class="card h-100 text-center feature-card">
+            <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                <div class="feature-icon mb-3">
+                    <i class="bi bi-calendar-event"></i>
                 </div>
+                <h5 class="card-title">Планування маршрутів</h5>
+                <p class="card-text">Створюйте детальний план подорожі на кілька днів, додавайте активності з часом та локацією</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100 text-center feature-card">
+            <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                <div class="feature-icon mb-3">
+                    <i class="bi bi-wallet2"></i>
+                </div>
+                <h5 class="card-title">Контроль бюджету</h5>
+                <p class="card-text">Встановлюйте бюджет, відстежуйте витрати по категоріях, дивіться детальну статистику</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100 text-center feature-card">
+            <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                <div class="feature-icon mb-3">
+                    <i class="bi bi-graph-up"></i>
+                </div>
+                <h5 class="card-title">Статистика подорожей</h5>
+                <p class="card-text">Аналізуйте витрати, слідкуйте за прогресом подорожі</p>
             </div>
         </div>
     </div>
 </div>
 
-<div class="cta-section text-center py-5">
-    <div class="container">
-        <h2 class="mb-4">Готові почати планувати?</h2>
-        <p class="lead mb-4">Приєднуйтесь до тисяч мандрівників, які вже користуються Travel Planner</p>
-        {% if not current_user.is_authenticated %}
-            <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg pulse-button">
-                Створити безкоштовний акаунт
-            </a>
-        {% else %}
-            <a href="{{ url_for('new_trip') }}" class="btn btn-primary btn-lg pulse-button">
-                Створити нову подорож
-            </a>
-        {% endif %}
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card h-100 text-center feature-card">
+            <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                <div class="feature-icon mb-3">
+                    <i class="bi bi-suitcase-lg"></i>
+                </div>
+                <h5 class="card-title">Список речей</h5>
+                <p class="card-text">Створюйте списки необхідних речей для подорожі. Ніколи нічого не забудете!</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100 text-center feature-card">
+            <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                <div class="feature-icon mb-3">
+                    <i class="bi bi-building"></i>
+                </div>
+                <h5 class="card-title">Бронювання готелів</h5>
+                <p class="card-text">Зберігайте інформацію про готелі, додавайте деталі бронювання</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100 text-center feature-card">
+            <div class="card-body d-flex flex-column align-items-center justify-content-center">
+                <div class="feature-icon mb-3">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+                <h5 class="card-title">Трекінг активностей</h5>
+                <p class="card-text">Відзначайте виконані активності, слідкуйте за прогресом подорожі</p>
+            </div>
+        </div>
     </div>
 </div>
+
+<!-- CTA Section -->
+{% if not current_user.is_authenticated %}
+<div class="text-center mt-5 pt-5">
+    <h2 class="mb-4">Готові почати планувати?</h2>
+    <p class="lead text-muted mb-4">Приєднуйтесь до тисяч мандрівників, які вже користуються Travel Planner</p>
+    <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg px-5">
+        <i class="bi bi-rocket-takeoff"></i> Розпочати безкоштовно
+    </a>
+</div>
+{% endif %}
+
 {% endblock %}

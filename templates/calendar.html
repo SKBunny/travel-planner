@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Календар подорожей - Travel Planner{% endblock %}
+
+{% block content %}
+<div class="calendar-header mb-4">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h1 class="mb-2">
+                <i class="bi bi-calendar3"></i> Календар подорожей
+            </h1>
+            <p class="text-muted mb-0">Візуалізація всіх ваших поїздок</p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-grid"></i> Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Статистика місяця -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card stat-card bg-gradient text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <div class="card-body text-center">
+                <i class="bi bi-calendar-event stat-icon"></i>
+                <h3 class="mb-1">{{ month_trips|length }}</h3>
+                <p class="mb-0">{{ month_trips|length|plural('Поїздка', 'Поїздки', 'Поїздок') }} цього місяця</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card stat-card bg-gradient text-white" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+            <div class="card-body text-center">
+                <i class="bi bi-suitcase-lg stat-icon"></i>
+                <h3 class="mb-1">{{ all_trips|length }}</h3>
+                <p class="mb-0">Всього {{ all_trips|length|plural('поїздка', 'поїздки', 'поїздок') }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card stat-card bg-gradient text-white" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+            <div class="card-body text-center">
+                <i class="bi bi-star-fill stat-icon"></i>
+                <h3 class="mb-1">{{ month_name }} {{ year }}</h3>
+                <p class="mb-0">Поточний місяць</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Календар -->
+<div class="card shadow-lg calendar-card">
+    <div class="card-header bg-primary text-white">
+        <div class="d-flex justify-content-between align-items-center">
+            <a href="{{ url_for('trip_calendar', year=prev_year, month=prev_month) }}" class="btn btn-light btn-sm">
+                <i class="bi bi-chevron-left"></i> Попередній
+            </a>
+            
+            <h4 class="mb-0">{{ month_name }} {{ year }}</h4>
+            
+            <a href="{{ url_for('trip_calendar', year=next_year, month=next_month) }}" class="btn btn-light btn-sm">
+                Наступний <i class="bi bi-chevron-right"></i>
+            </a>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="calendar-grid">
+            <!-- Заголовки днів тижня -->
+            <div class="calendar-header-row">
+                <div class="calendar-day-header">Пн</div>
+                <div class="calendar-day-header">Вт</div>
+                <div class="calendar-day-header">Ср</div>
+                <div class="calendar-day-header">Чт</div>
+                <div class="calendar-day-header">Пт</div>
+                <div class="calendar-day-header">Сб</div>
+                <div class="calendar-day-header">Нд</div>
+            </div>
+            
+            <!-- Дні місяця -->
+            {% for week in month_calendar %}
+                <div class="calendar-week">
+                    {% for day in week %}
+                        {% if day == 0 %}
+                            <div class="calendar-day empty"></div>
+                        {% else %}
+                            {% set is_today = (day == today.day and month == today.month and year == today.year) %}
+                            {% set day_trips = trips_by_date.get(day, []) %}
+                            
+                            <div class="calendar-day {% if is_today %}today{% endif %} {% if day_trips %}has-trips{% endif %}">
+                                <div class="day-number">{{ day }}</div>
+                                
+                                {% if day_trips %}
+                                    <div class="day-trips">
+                                        {% for trip in day_trips[:2] %}
+                                            <div class="trip-badge" data-bs-toggle="tooltip" title="{{ trip.title }} - {{ trip.destination }}">
+                                                <i class="bi bi-airplane-fill"></i>
+                                                <span class="trip-title">{{ trip.title[:15] }}{% if trip.title|length > 15 %}...{% endif %}</span>
+                                            </div>
+                                        {% endfor %}
+                                        
+                                        {% if day_trips|length > 2 %}
+                                            <div class="trip-more">
+                                                +{{ day_trips|length - 2 }} ще
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Список поїздок місяця -->
+{% if month_trips %}
+<div class="card shadow-sm mt-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0"><i class="bi bi-list-ul"></i> Поїздки {{ month_name }}</h5>
+    </div>
+    <div class="card-body">
+        <div class="list-group list-group-flush">
+            {% for trip in month_trips %}
+                <a href="{{ url_for('view_trip', trip_id=trip.id) }}" class="list-group-item list-group-item-action">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">
+                                <i class="bi bi-airplane-fill text-primary"></i>
+                                {{ trip.title }}
+                            </h6>
+                            <p class="mb-1 text-muted">
+                                <i class="bi bi-geo-alt"></i> {{ trip.destination }}
+                            </p>
+                            <small class="text-muted">
+                                <i class="bi bi-calendar-range"></i>
+                                {{ trip.start_date.strftime('%d.%m.%Y') }} - {{ trip.end_date.strftime('%d.%m.%Y') }}
+                            </small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-primary">{{ trip.budget }} грн</span>
+                        </div>
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Легенда -->
+<div class="card shadow-sm mt-4">
+    <div class="card-body">
+        <h6 class="mb-3"><i class="bi bi-info-circle"></i> Легенда</h6>
+        <div class="row">
+            <div class="col-md-4 mb-2">
+                <span class="legend-item">
+                    <span class="legend-color today-color"></span>
+                    Сьогодні
+                </span>
+            </div>
+            <div class="col-md-4 mb-2">
+                <span class="legend-item">
+                    <span class="legend-color trip-color"></span>
+                    День з поїздкою
+                </span>
+            </div>
+            <div class="col-md-4 mb-2">
+                <span class="legend-item">
+                    <i class="bi bi-airplane-fill text-primary"></i>
+                    Активна поїздка
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Ініціалізація tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+</script>
+
+{% endblock %}

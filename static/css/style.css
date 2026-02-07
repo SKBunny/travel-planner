@@ -14,22 +14,32 @@
 
     --primary-color: #667eea;
     --secondary-color: #764ba2;
-    --success-color: #00f2fe;
-    --danger-color: #f5576c;
-    --warning-color: #fee140;
+    --success-color: #48bb78;
+    --danger-color: #f56565;
+    --warning-color: #ed8936;
+    --info-color: #4299e1;
 
     --text-dark: #2d3748;
     --text-light: #718096;
     --bg-light: #f7fafc;
     --bg-white: #ffffff;
 
-    --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
-    --shadow-md: 0 4px 15px rgba(0,0,0,0.1);
-    --shadow-lg: 0 10px 40px rgba(0,0,0,0.15);
-    --shadow-xl: 0 20px 60px rgba(0,0,0,0.2);
+    --shadow-sm: 0 2px 4px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 8px rgba(0,0,0,0.1);
+    --shadow-lg: 0 8px 16px rgba(0,0,0,0.12);
+    --shadow-xl: 0 16px 32px rgba(0,0,0,0.15);
 
     --border-radius: 15px;
-    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Плавні переходи */
+    --transition-fast: all 0.15s ease;
+    --transition: all 0.3s ease;
+    --transition-slow: all 0.5s ease;
+    --ease-out: cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+html {
+    scroll-behavior: smooth;
 }
 
 body {
@@ -38,6 +48,16 @@ body {
     color: var(--text-dark);
     min-height: 100vh;
     overflow-x: hidden;
+}
+
+/* М'яке завантаження сторінки */
+body {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 /* ==================== NAVIGATION ==================== */
@@ -72,12 +92,6 @@ body {
 .brand-icon {
     font-size: 2rem;
     margin-right: 10px;
-    animation: float 3s ease-in-out infinite;
-}
-
-@keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-5px); }
 }
 
 .brand-text {
@@ -100,42 +114,28 @@ body {
     position: relative;
 }
 
-.nav-link-custom::before {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 0;
-    height: 3px;
-    background: var(--primary-gradient);
-    transition: width 0.3s ease;
-    border-radius: 10px;
-}
-
-.nav-link-custom:hover::before {
-    width: 80%;
-}
-
 .nav-link-custom:hover {
     color: var(--primary-color) !important;
     background: rgba(102, 126, 234, 0.1);
 }
 
 .btn-gradient-primary {
-    background: var(--primary-gradient);
+    background: #667eea;
     border: none;
     color: white;
-    padding: 0.6rem 1.5rem;
-    border-radius: 25px;
-    font-weight: 600;
+    padding: 0.65rem 1.25rem;
+    border-radius: 10px;
+    font-weight: 500;
+    font-size: 0.95rem;
     transition: var(--transition);
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
 }
 
 .btn-gradient-primary:hover {
+    background: #5568d3;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
     transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
+    color: white;
 }
 
 .custom-dropdown {
@@ -148,12 +148,13 @@ body {
 
 .custom-dropdown .dropdown-item {
     padding: 0.8rem 1.2rem;
-    transition: var(--transition);
+    transition: var(--transition-fast);
 }
 
 .custom-dropdown .dropdown-item:hover {
-    background: var(--primary-gradient);
-    color: white;
+    background: rgba(102, 126, 234, 0.1);
+    color: var(--primary-color);
+    transform: translateX(3px);
 }
 
 /* ==================== MAIN CONTENT ==================== */
@@ -176,13 +177,13 @@ body {
 
 .custom-alert {
     border: none;
-    border-radius: var(--border-radius);
+    border-radius: 12px;
     box-shadow: var(--shadow-lg);
     backdrop-filter: blur(10px);
-    animation: slideInRight 0.5s ease;
+    animation: slideIn 0.4s ease-out;
 }
 
-@keyframes slideInRight {
+@keyframes slideIn {
     from {
         transform: translateX(100%);
         opacity: 0;
@@ -204,23 +205,27 @@ body {
 }
 
 .alert-success {
-    background: linear-gradient(135deg, rgba(72, 187, 120, 0.95) 0%, rgba(56, 178, 172, 0.95) 100%);
+    background: #48bb78;
     color: white;
+    border-left: 4px solid #38a169;
 }
 
 .alert-danger {
-    background: linear-gradient(135deg, rgba(245, 101, 101, 0.95) 0%, rgba(245, 87, 108, 0.95) 100%);
+    background: #f56565;
     color: white;
+    border-left: 4px solid #e53e3e;
 }
 
 .alert-warning {
-    background: linear-gradient(135deg, rgba(250, 112, 154, 0.95) 0%, rgba(254, 225, 64, 0.95) 100%);
+    background: #ed8936;
     color: white;
+    border-left: 4px solid #dd6b20;
 }
 
 .alert-info {
-    background: linear-gradient(135deg, rgba(79, 172, 254, 0.95) 0%, rgba(0, 242, 254, 0.95) 100%);
+    background: #4299e1;
     color: white;
+    border-left: 4px solid #3182ce;
 }
 
 /* ==================== CARDS ==================== */
@@ -246,41 +251,149 @@ body {
     padding: 1.5rem;
 }
 
+/* ==================== FEATURE CARDS (ГОЛОВНА) ==================== */
+
+.feature-card {
+    border-radius: 16px !important;
+    border: 1px solid #e2e8f0;
+    transition: var(--transition);
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+    border-color: #cbd5e0;
+}
+
+.feature-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    transition: var(--transition);
+}
+
+.feature-card:hover .feature-icon {
+    transform: scale(1.1);
+}
+
+.feature-card .card-body {
+    padding: 2rem 1.5rem;
+}
+
+.feature-card .card-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--text-dark);
+}
+
+.feature-card .card-text {
+    color: var(--text-light);
+    line-height: 1.6;
+}
+
 /* ==================== BUTTONS ==================== */
 
 .btn {
-    border-radius: 12px;
-    padding: 0.6rem 1.5rem;
-    font-weight: 600;
+    border-radius: 10px;
+    padding: 0.65rem 1.25rem;
+    font-weight: 500;
+    font-size: 0.95rem;
+    line-height: 1.5;
     transition: var(--transition);
     border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+}
+
+.btn:active {
+    transform: translateY(0);
+    transition: var(--transition-fast);
 }
 
 .btn-primary {
-    background: var(--primary-gradient);
-    box-shadow: var(--shadow-md);
+    background: #667eea;
+    color: white;
+    box-shadow: 0 2px 4px rgba(102, 126, 234, 0.2);
 }
 
 .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
+    background: #5568d3;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    color: white;
 }
 
 .btn-success {
-    background: var(--success-gradient);
+    background: #48bb78;
+    color: white;
+    box-shadow: 0 2px 4px rgba(72, 187, 120, 0.2);
+}
+
+.btn-success:hover {
+    background: #38a169;
+    box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
+    color: white;
 }
 
 .btn-danger {
-    background: var(--secondary-gradient);
+    background: #f56565;
+    color: white;
+    box-shadow: 0 2px 4px rgba(245, 101, 101, 0.2);
+}
+
+.btn-danger:hover {
+    background: #e53e3e;
+    box-shadow: 0 4px 12px rgba(245, 101, 101, 0.4);
+    color: white;
 }
 
 .btn-warning {
-    background: var(--warning-gradient);
+    background: #ed8936;
+    color: white;
+    box-shadow: 0 2px 4px rgba(237, 137, 54, 0.2);
+}
+
+.btn-warning:hover {
+    background: #dd6b20;
+    box-shadow: 0 4px 12px rgba(237, 137, 54, 0.4);
     color: white;
 }
 
 .btn-info {
-    background: var(--success-gradient);
+    background: #4299e1;
+    color: white;
+    box-shadow: 0 2px 4px rgba(66, 153, 225, 0.2);
+}
+
+.btn-info:hover {
+    background: #3182ce;
+    box-shadow: 0 4px 12px rgba(66, 153, 225, 0.4);
+    color: white;
+}
+
+.btn-outline-secondary {
+    background: white;
+    border: 1px solid #cbd5e0;
+    color: #4a5568;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.btn-outline-secondary:hover {
+    background: #f7fafc;
+    border-color: #a0aec0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    color: #2d3748;
 }
 
 /* ==================== FORMS ==================== */
@@ -289,7 +402,7 @@ body {
     border: 2px solid #e2e8f0;
     border-radius: 12px;
     padding: 0.75rem 1rem;
-    transition: var(--transition);
+    transition: var(--transition-fast);
 }
 
 .form-control:focus, .form-select:focus {
@@ -367,12 +480,13 @@ body {
     top: 0;
     left: 0;
     right: 0;
-    height: 5px;
-    background: var(--primary-gradient);
+    height: 4px;
+    background: #667eea;
+    border-radius: 15px 15px 0 0;
 }
 
 .trip-card:hover {
-    transform: translateY(-10px) scale(1.02);
+    transform: translateY(-8px);
     box-shadow: var(--shadow-xl);
 }
 
@@ -403,36 +517,28 @@ body {
 
 .stat-card {
     border: none;
-    border-radius: 20px;
+    border-radius: 16px;
     transition: var(--transition);
-    position: relative;
-    overflow: hidden;
-}
-
-.stat-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 100%);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.stat-card:hover::before {
-    opacity: 1;
+    box-shadow: var(--shadow-md);
 }
 
 .stat-card:hover {
-    transform: translateY(-5px) scale(1.03);
+    transform: translateY(-5px);
     box-shadow: var(--shadow-xl);
 }
 
+.stat-card .card-body {
+    padding: 1.75rem 1.25rem;
+}
+
+.stat-card h2, .stat-card h3 {
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
 .stat-icon {
-    font-size: 3rem;
-    margin-bottom: 15px;
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
     opacity: 0.9;
 }
 
@@ -445,20 +551,19 @@ body {
     margin-top: 80px;
 }
 
-
-
 .footer-content {
     padding: 80px 0 30px;
 }
 
 .footer-brand h3 {
-    background: var(--primary-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    font-size: 2rem;
+    color: white;
+    font-size: 1.75rem;
     font-weight: 700;
-    margin-bottom: 20px;
+    margin-bottom: 1rem;
+}
+
+.footer-brand h3::before {
+    content: '✈️ ';
 }
 
 .footer-title {
@@ -492,7 +597,7 @@ body {
 .footer-links a {
     color: #a0aec0;
     text-decoration: none;
-    transition: var(--transition);
+    transition: var(--transition-fast);
     display: inline-block;
 }
 
@@ -522,7 +627,7 @@ body {
 }
 
 .social-link:hover {
-    background: var(--primary-gradient);
+    background: #667eea;
     transform: translateY(-5px);
     color: white;
 }
@@ -554,23 +659,6 @@ body {
     }
 }
 
-/* ==================== ANIMATIONS ==================== */
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.card, .trip-card, .activity-item {
-    animation: fadeInUp 0.6s ease;
-}
-
 /* ==================== PACKING LIST ==================== */
 
 .packing-header-card {
@@ -581,12 +669,6 @@ body {
 .packing-icon {
     font-size: 2.5rem;
     color: var(--primary-color);
-    animation: swing 2s ease-in-out infinite;
-}
-
-@keyframes swing {
-    0%, 100% { transform: rotate(-5deg); }
-    50% { transform: rotate(5deg); }
 }
 
 .packing-stats h3 {
@@ -605,7 +687,7 @@ body {
 }
 
 .packing-progress .progress-bar {
-    background: var(--primary-gradient);
+    background: #667eea;
     font-weight: 600;
     display: flex;
     align-items: center;
@@ -614,7 +696,7 @@ body {
 }
 
 .bg-gradient-primary {
-    background: var(--primary-gradient) !important;
+    background: #667eea !important;
 }
 
 .packing-category-card {
@@ -637,7 +719,7 @@ body {
 .packing-item {
     padding: 15px;
     border-bottom: 1px solid #e2e8f0;
-    transition: var(--transition);
+    transition: var(--transition-fast);
 }
 
 .packing-item:last-child {
@@ -665,7 +747,7 @@ body {
     font-size: 1.5rem;
     color: var(--primary-color);
     cursor: pointer;
-    transition: var(--transition);
+    transition: var(--transition-fast);
     padding: 0;
 }
 
@@ -700,7 +782,7 @@ body {
     font-size: 1.2rem;
     cursor: pointer;
     opacity: 0;
-    transition: var(--transition);
+    transition: var(--transition-fast);
     padding: 0;
 }
 
@@ -713,7 +795,7 @@ body {
 }
 
 .empty-state {
-    animation: fadeInUp 0.6s ease;
+    opacity: 1;
 }
 
 /* Responsive */
@@ -737,12 +819,6 @@ body {
 .accommodation-icon {
     font-size: 2.5rem;
     color: #4facfe;
-    animation: bounce 2s ease-in-out infinite;
-}
-
-@keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
 }
 
 .stat-box {
@@ -764,7 +840,7 @@ body {
 }
 
 .accommodation-card:hover {
-    transform: translateY(-10px);
+    transform: translateY(-8px);
     box-shadow: var(--shadow-xl);
 }
 
@@ -1007,255 +1083,6 @@ body,
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-
-/* ==================== ПОКРАЩЕНІ АНІМАЦІЇ ==================== */
-
-/* Плавна поява при завантаженні */
-@keyframes slideInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes slideInLeft {
-    from {
-        opacity: 0;
-        transform: translateX(-30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-@keyframes slideInRight {
-    from {
-        opacity: 0;
-        transform: translateX(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-@keyframes scaleIn {
-    from {
-        opacity: 0;
-        transform: scale(0.9);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-/* Застосування анімацій */
-.card {
-    animation: scaleIn 0.5s ease;
-}
-
-.trip-card:nth-child(1) { animation-delay: 0.1s; }
-.trip-card:nth-child(2) { animation-delay: 0.2s; }
-.trip-card:nth-child(3) { animation-delay: 0.3s; }
-.trip-card:nth-child(4) { animation-delay: 0.4s; }
-
-/* Покращені ховер-ефекти для кнопок */
-.btn {
-    position: relative;
-    overflow: hidden;
-    z-index: 1;
-}
-
-.btn::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 0;
-    height: 0;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.2);
-    transform: translate(-50%, -50%);
-    transition: width 0.6s, height 0.6s;
-    z-index: -1;
-}
-
-.btn:hover::before {
-    width: 300px;
-    height: 300px;
-}
-
-/* Ripple effect для кнопок */
-.btn:active {
-    transform: scale(0.95);
-}
-
-/* Покращені картки з gradient border */
-.trip-card {
-    position: relative;
-    background: white;
-    border: none;
-}
-
-.trip-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: var(--primary-gradient);
-    border-radius: 15px 15px 0 0;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.trip-card:hover::before {
-    opacity: 1;
-}
-
-/* Floating labels для форм */
-.form-floating {
-    position: relative;
-}
-
-.form-floating > .form-control:focus ~ label,
-.form-floating > .form-control:not(:placeholder-shown) ~ label {
-    transform: scale(0.85) translateY(-0.5rem) translateX(0.15rem);
-}
-
-/* Skeleton loading для карток */
-@keyframes shimmer {
-    0% {
-        background-position: -1000px 0;
-    }
-    100% {
-        background-position: 1000px 0;
-    }
-}
-
-.skeleton {
-    animation: shimmer 2s infinite;
-    background: linear-gradient(to right, #f0f0f0 4%, #f8f8f8 25%, #f0f0f0 36%);
-    background-size: 1000px 100%;
-}
-
-/* Гарні shadow ефекти */
-.card-hover-lift {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.card-hover-lift:hover {
-    transform: translateY(-10px);
-    box-shadow: 0 20px 60px rgba(102, 126, 234, 0.3);
-}
-
-/* Красиві badges */
-.badge {
-    padding: 0.5em 1em;
-    border-radius: 20px;
-    font-weight: 500;
-    letter-spacing: 0.5px;
-}
-
-/* Gradient text */
-.gradient-text {
-    background: var(--primary-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-/* Icon animations */
-.icon-bounce {
-    animation: bounce 2s infinite;
-}
-
-@keyframes bounce {
-    0%, 100% {
-        transform: translateY(0);
-    }
-    50% {
-        transform: translateY(-10px);
-    }
-}
-
-.icon-rotate {
-    transition: transform 0.3s ease;
-}
-
-.icon-rotate:hover {
-    transform: rotate(360deg);
-}
-
-/* Progress bars з градієнтом */
-.progress-bar {
-    background: var(--primary-gradient);
-    position: relative;
-    overflow: hidden;
-}
-
-.progress-bar::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    right: 0;
-    background: linear-gradient(
-        90deg,
-        transparent,
-        rgba(255, 255, 255, 0.3),
-        transparent
-    );
-    animation: shimmer 2s infinite;
-}
-
-/* Кастомні scrollbar */
-::-webkit-scrollbar {
-    width: 10px;
-}
-
-::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--primary-gradient);
-    border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-}
-
-body.dark-mode::-webkit-scrollbar-track {
-    background: #1a202c;
-}
-
-/* Покращені модальні вікна */
-.modal.fade .modal-dialog {
-    transform: scale(0.8);
-    transition: transform 0.3s ease-out;
-}
-
-.modal.show .modal-dialog {
-    transform: scale(1);
-}
-
-/* Blur background для модалів */
-.modal-backdrop.show {
-    backdrop-filter: blur(5px);
-    background: rgba(0, 0, 0, 0.5);
-}
-
 /* ==================== USER PROFILE ==================== */
 
 .profile-card {
@@ -1273,51 +1100,254 @@ body.dark-mode::-webkit-scrollbar-track {
     height: 120px;
     border-radius: 50%;
     background: var(--primary-gradient);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+display: flex;
+align-items: center;
+justify-content: center;
+box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
 }
-
 .avatar-text {
-    font-size: 3rem;
-    font-weight: 700;
-    color: white;
+font-size: 3rem;
+font-weight: 700;
+color: white;
 }
-
 .stat-item {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 10px 0;
+display: flex;
+align-items: center;
+gap: 15px;
+padding: 10px 0;
 }
-
 .stat-icon {
-    width: 50px;
-    height: 50px;
-    border-radius: 12px;
-    background: rgba(102, 126, 234, 0.1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
+width: 50px;
+height: 50px;
+border-radius: 12px;
+background: rgba(102, 126, 234, 0.1);
+display: flex;
+align-items: center;
+justify-content: center;
+font-size: 1.5rem;
 }
-
 .stat-content h3 {
-    font-weight: 700;
-    color: var(--primary-color);
+font-weight: 700;
+color: var(--primary-color);
 }
-
 .settings-item {
-    padding: 10px 0;
+padding: 10px 0;
 }
-
 /* Dark mode для профілю */
 body.dark-mode .avatar-circle {
-    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
+box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
 }
-
 body.dark-mode .stat-icon {
-    background: rgba(102, 126, 234, 0.2);
+background: rgba(102, 126, 234, 0.2);
+}
+/* ==================== CALENDAR ==================== */
+.calendar-card {
+border-radius: 20px;
+overflow: hidden;
+}
+.calendar-grid {
+display: flex;
+flex-direction: column;
+}
+.calendar-header-row {
+display: grid;
+grid-template-columns: repeat(7, 1fr);
+background: #f7fafc;
+border-bottom: 2px solid #e2e8f0;
+}
+.calendar-day-header {
+padding: 15px;
+text-align: center;
+font-weight: 700;
+color: var(--text-dark);
+text-transform: uppercase;
+font-size: 0.9rem;
+}
+.calendar-week {
+display: grid;
+grid-template-columns: repeat(7, 1fr);
+border-bottom: 1px solid #e2e8f0;
+}
+.calendar-week:last-child {
+border-bottom: none;
+}
+.calendar-day {
+min-height: 120px;
+padding: 10px;
+border-right: 1px solid #e2e8f0;
+position: relative;
+transition: var(--transition);
+background: white;
+}
+.calendar-day:nth-child(7) {
+border-right: none;
+}
+.calendar-day.empty {
+background: #f7fafc;
+}
+.calendar-day:hover:not(.empty) {
+background: rgba(102, 126, 234, 0.05);
+box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.calendar-day.today {
+background: rgba(102, 126, 234, 0.1);
+border: 2px solid var(--primary-color);
+}
+.calendar-day.has-trips {
+background: rgba(79, 172, 254, 0.05);
+}
+.day-number {
+font-size: 1.2rem;
+font-weight: 700;
+color: var(--text-dark);
+margin-bottom: 8px;
+}
+.calendar-day.today .day-number {
+color: var(--primary-color);
+}
+.day-trips {
+display: flex;
+flex-direction: column;
+gap: 5px;
+}
+.trip-badge {
+background: #667eea;
+color: white;
+padding: 5px 8px;
+border-radius: 8px;
+font-size: 0.75rem;
+display: flex;
+align-items: center;
+gap: 5px;
+cursor: pointer;
+transition: var(--transition-fast);
+}
+.trip-badge:hover {
+transform: translateX(3px);
+box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+.trip-badge i {
+font-size: 0.9rem;
+}
+.trip-title {
+white-space: nowrap;
+overflow: hidden;
+text-overflow: ellipsis;
+}
+.trip-more {
+background: #e2e8f0;
+color: var(--text-dark);
+padding: 3px 8px;
+border-radius: 6px;
+font-size: 0.7rem;
+text-align: center;
+font-weight: 600;
+}
+/* Легенда */
+.legend-item {
+display: flex;
+align-items: center;
+gap: 10px;
+}
+.legend-color {
+width: 20px;
+height: 20px;
+border-radius: 5px;
+display: inline-block;
+}
+.today-color {
+background: rgba(102, 126, 234, 0.3);
+border: 2px solid var(--primary-color);
+}
+.trip-color {
+background: rgba(79, 172, 254, 0.2);
+}
+/* Dark mode для календаря */
+body.dark-mode .calendar-header-row {
+background: #1a202c;
+}
+body.dark-mode .calendar-day {
+background: #2d3748;
+border-color: #4a5568;
+}
+body.dark-mode .calendar-day.empty {
+background: #1a202c;
+}
+body.dark-mode .calendar-day.today {
+background: rgba(102, 126, 234, 0.2);
+}
+body.dark-mode .calendar-day.has-trips {
+background: rgba(79, 172, 254, 0.1);
+}
+body.dark-mode .trip-more {
+background: #4a5568;
+color: var(--text-dark);
+}
+/* Responsive */
+@media (max-width: 768px) {
+.calendar-day {
+min-height: 80px;
+padding: 5px;
+}
+.day-number {
+    font-size: 1rem;
 }
 
+.trip-badge {
+    font-size: 0.65rem;
+    padding: 3px 5px;
+}
+
+.trip-title {
+    display: none;
+}
+
+.calendar-day-header {
+    font-size: 0.7rem;
+    padding: 10px 5px;
+}
+}
+/* ==================== SEARCH & FILTERS ==================== */
+.input-group-text {
+background: white;
+border-right: none;
+}
+.input-group .form-control {
+border-left: none;
+}
+.input-group .form-control:focus {
+border-left: none;
+box-shadow: none;
+}
+.input-group .form-control:focus + .input-group-text {
+border-color: var(--primary-color);
+}
+/* Dark mode для пошуку */
+body.dark-mode .input-group-text {
+background: #1a202c;
+color: var(--text-dark);
+border-color: var(--border-color);
+}
+body.dark-mode .input-group .form-control {
+background: #1a202c;
+color: var(--text-dark);
+border-color: var(--border-color);
+}
+/* ==================== SCROLLBAR ==================== */
+::-webkit-scrollbar {
+width: 10px;
+}
+::-webkit-scrollbar-track {
+background: #f1f1f1;
+border-radius: 10px;
+}
+::-webkit-scrollbar-thumb {
+background: var(--primary-gradient);
+border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+body.dark-mode::-webkit-scrollbar-track {
+background: #1a202c;
+}

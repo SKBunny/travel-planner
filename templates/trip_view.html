@@ -45,16 +45,28 @@
                 <p class="mb-0">{{ (trip.end_date - trip.start_date).days + 1 }} днів</p>
             </div>
             <div class="col-md-3 mb-3">
-                <h6><i class="bi bi-wallet2"></i> Бюджет</h6>
-                <p class="lead mb-0">{{ "%.2f"|format(trip.budget) }} грн</p>
-                {% if trip.activities %}
-                    {% set total_spent = trip.activities|sum(attribute='cost') %}
-                    <small class="text-muted">Витрачено: {{ "%.2f"|format(total_spent) }} грн</small>
-                    {% if total_spent > trip.budget %}
-                        <small class="text-danger d-block">Перевищення на {{ "%.2f"|format(total_spent - trip.budget) }} грн</small>
-                    {% endif %}
-                {% endif %}
-            </div>
+    <h6><i class="bi bi-wallet2"></i> Бюджет</h6>
+    <p class="lead mb-0">
+        {{ "%.2f"|format(trip.budget) }} {{ currency_symbols.get(trip.currency, trip.currency) }}
+    </p>
+    {% if trip.currency != 'UAH' %}
+        <small class="text-muted d-block">
+            ≈ {{ "%.2f"|format(trip.budget * currency_rates[trip.currency]) }} ₴
+        </small>
+    {% endif %}
+
+    {% if trip.activities %}
+        {% set total_spent = trip.activities|sum(attribute='cost') %}
+        <small class="text-muted d-block mt-2">
+            Витрачено: {{ "%.2f"|format(total_spent) }} грн
+        </small>
+        {% if total_spent > (trip.budget * currency_rates[trip.currency]) %}
+            <small class="text-danger d-block">
+                Перевищення на {{ "%.2f"|format(total_spent - (trip.budget * currency_rates[trip.currency])) }} грн
+            </small>
+        {% endif %}
+    {% endif %}
+</div>
         </div>
     </div>
 </div>

@@ -25,16 +25,15 @@
         </div>
     </div>
 
-    <div class="col-md-3 mb-3">
-        <div class="card stat-card bg-danger text-white">
-            <div class="card-body text-center">
-                <i class="bi bi-cash-stack stat-icon"></i>
-                <h3 class="mb-1">{{ "%.2f"|format(total_spent) }} грн</h3>
-                <p class="mb-0">Витрачено</p>
-                <small>(Активності: {{ "%.0f"|format(total_activities_cost) }} + Готелі: {{ "%.0f"|format(total_accommodation_cost) }})</small>
-            </div>
+   <div class="col-md-3 mb-3">
+    <div class="card stat-card bg-danger text-white">
+        <div class="card-body text-center">
+            <i class="bi bi-cash-stack stat-icon"></i>
+            <h3 class="mb-1">{{ "%.2f"|format(total_spent) }} грн</h3>
+            <p class="mb-0">Витрачено</p>
         </div>
     </div>
+</div>
 
     <div class="col-md-3 mb-3">
         <div class="card stat-card {% if remaining_budget >= 0 %}bg-success{% else %}bg-warning{% endif %} text-white">
