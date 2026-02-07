@@ -3,6 +3,39 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+from reportlab.lib.pagesizes import A4, letter
+from reportlab.lib import colors
+from reportlab.lib.units import cm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from io import BytesIO
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file
+
+
+def transliterate(text):
+    """Транслітерація українського тексту для PDF"""
+    if not text:
+        return text
+
+    translit_dict = {
+        'а': 'a', 'б': 'b', 'в': 'v', 'г': 'h', 'ґ': 'g', 'д': 'd', 'е': 'e', 'є': 'ie',
+        'ж': 'zh', 'з': 'z', 'и': 'y', 'і': 'i', 'ї': 'i', 'й': 'i', 'к': 'k', 'л': 'l',
+        'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+        'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch', 'ь': '', 'ю': 'iu', 'я': 'ia',
+        'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'H', 'Ґ': 'G', 'Д': 'D', 'Е': 'E', 'Є': 'Ie',
+        'Ж': 'Zh', 'З': 'Z', 'И': 'Y', 'І': 'I', 'Ї': 'I', 'Й': 'I', 'К': 'K', 'Л': 'L',
+        'М': 'M', 'Н': 'N', 'О': 'O', 'П': 'P', 'Р': 'R', 'С': 'S', 'Т': 'T', 'У': 'U',
+        'Ф': 'F', 'Х': 'Kh', 'Ц': 'Ts', 'Ч': 'Ch', 'Ш': 'Sh', 'Щ': 'Shch', 'Ь': '', 'Ю': 'Iu', 'Я': 'Ia',
+        '✈': '', '️': '', '📅': '', '🎒': '', '📝': '', '✓': 'V', '☐': '[ ]'
+    }
+
+    result = []
+    for char in text:
+        result.append(translit_dict.get(char, char))
+    return ''.join(result)
 
 # Курси валют (статичні для MVP, можна підключити API)
 CURRENCY_RATES = {
@@ -619,6 +652,669 @@ def view_trip(trip_id):
                            currency_symbols=CURRENCY_SYMBOLS)
 
 
+# Зберегти поїздку як шаблон
+@app.route('/trip/<int:trip_id>/save-as-template', methods=['GET', 'POST'])
+@login_required
+def save_as_template(trip_id):
+    trip = Trip.query.get_or_404(trip_id)
+
+    if trip.user_id != current_user.id:
+        flash('У вас немає доступу до цієї поїздки', 'danger')
+        return redirect(url_for('dashboard'))
+
+    if request.method == 'POST':
+        import json
+
+        template_name = request.form.get('template_name')
+        description = request.form.get('description')
+        is_public = request.form.get('is_public') == 'on'
+
+        # Збираємо активності
+        activities_data = []
+        for activity in trip.activities:
+            activities_data.append({
+                'title': activity.title,
+                'category': activity.category,
+                'location': activity.location if hasattr(activity, 'location') else '',
+                'time': activity.time if hasattr(activity, 'time') else '',
+                'cost': activity.cost if hasattr(activity, 'cost') else 0
+            })
+
+        # Збираємо packing list
+        packing_data = []
+        packing_items = PackingItem.query.filter_by(trip_id=trip.id).all()
+        for item in packing_items:
+            packing_data.append({
+                'name': item.name,
+                'category': item.category,
+                'quantity': item.quantity
+            })
+
+        # Створюємо шаблон
+        duration = (trip.end_date - trip.start_date).days + 1
+
+        template = TripTemplate(
+            name=template_name,
+            description=description,
+            destination_type=trip.destination,
+            duration_days=duration,
+            budget_estimate=trip.budget,
+            currency=trip.currency,
+            is_public=is_public,
+            user_id=current_user.id,
+            activities_template=json.dumps(activities_data, ensure_ascii=False),
+            packing_template=json.dumps(packing_data, ensure_ascii=False)
+        )
+
+        db.session.add(template)
+        db.session.commit()
+
+        flash(f'Шаблон "{template_name}" збережено!', 'success')
+        return redirect(url_for('templates_list'))
+
+    return render_template('save_as_template.html', trip=trip)
+
+
+# Список шаблонів
+@app.route('/templates')
+@login_required
+def templates_list():
+    # Мої шаблони
+    my_templates = TripTemplate.query.filter_by(user_id=current_user.id).order_by(TripTemplate.created_at.desc()).all()
+
+    # Публічні шаблони інших користувачів
+    public_templates = TripTemplate.query.filter_by(is_public=True).filter(
+        TripTemplate.user_id != current_user.id).limit(10).all()
+
+    return render_template('templates_list.html',
+                           my_templates=my_templates,
+                           public_templates=public_templates)
+
+
+# Створити поїздку з шаблону
+@app.route('/templates/<int:template_id>/use', methods=['GET', 'POST'])
+@login_required
+def use_template(template_id):
+    template = TripTemplate.query.get_or_404(template_id)
+
+    # Перевірка доступу
+    if not template.is_public and template.user_id != current_user.id:
+        flash('У вас немає доступу до цього шаблону', 'danger')
+        return redirect(url_for('templates_list'))
+
+    if request.method == 'POST':
+        import json
+        from datetime import timedelta
+
+        title = request.form.get('title')
+        destination = request.form.get('destination')
+        start_date = datetime.strptime(request.form.get('start_date'), '%Y-%m-%d').date()
+        budget = float(request.form.get('budget'))
+
+        # Створюємо нову поїздку
+        end_date = start_date + timedelta(days=template.duration_days - 1)
+
+        new_trip = Trip(
+            title=title,
+            destination=destination,
+            start_date=start_date,
+            end_date=end_date,
+            budget=budget,
+            currency=template.currency,
+            user_id=current_user.id
+        )
+
+        db.session.add(new_trip)
+        db.session.flush()  # Отримуємо ID нової поїздки
+
+        # Додаємо активності з шаблону
+        if template.activities_template:
+            activities_data = json.loads(template.activities_template)
+            current_date = start_date
+
+            for act_data in activities_data:
+                activity = Activity(
+                    title=act_data['title'],
+                    date=current_date,
+                    time=act_data.get('time'),
+                    location=act_data.get('location'),
+                    category=act_data['category'],
+                    cost=act_data.get('cost', 0),
+                    notes=act_data.get('notes'),
+                    trip_id=new_trip.id
+                )
+                db.session.add(activity)
+
+                # Розподіляємо активності по днях
+                if len(activities_data) > template.duration_days:
+                    # Якщо активностей більше ніж днів, розподіляємо рівномірно
+                    pass
+                else:
+                    current_date += timedelta(days=1)
+                    if current_date > end_date:
+                        current_date = start_date
+
+        # Додаємо packing list з шаблону
+        if template.packing_template:
+            packing_data = json.loads(template.packing_template)
+
+            for pack_data in packing_data:
+                packing_item = PackingItem(
+                    name=pack_data['name'],
+                    category=pack_data['category'],
+                    quantity=pack_data.get('quantity', 1),
+                    trip_id=new_trip.id
+                )
+                db.session.add(packing_item)
+
+        db.session.commit()
+
+        flash(f'Поїздку "{title}" створено з шаблону!', 'success')
+        return redirect(url_for('view_trip', trip_id=new_trip.id))
+
+    return render_template('use_template.html',
+                           template=template,
+                           currency_symbols=CURRENCY_SYMBOLS)
+
+
+# Нотатки для поїздки
+class TripNote(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    category = db.Column(db.String(50))  # Загальне, Важливе, Контакти, Посилання
+    is_pinned = db.Column(db.Boolean, default=False)
+    trip_id = db.Column(db.Integer, db.ForeignKey('trip.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+
+    def __repr__(self):
+        return f'<TripNote {self.title}>'
+
+
+@app.route('/trip/<int:trip_id>/export/pdf')
+@login_required
+def export_trip_pdf(trip_id):
+    trip = Trip.query.get_or_404(trip_id)
+
+    if trip.user_id != current_user.id:
+        flash('У вас немає доступу до цієї поїздки', 'danger')
+        return redirect(url_for('dashboard'))
+
+    # Створюємо PDF в пам'яті
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=1.5 * cm,
+        leftMargin=1.5 * cm,
+        topMargin=1.5 * cm,
+        bottomMargin=1.5 * cm
+    )
+
+    # Контейнер для елементів
+    elements = []
+
+    # Реєструємо шрифт з підтримкою кирилиці
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    import os
+
+    font_path = os.path.join(os.path.dirname(__file__), 'static', 'fonts')
+
+    try:
+        pdfmetrics.registerFont(TTFont('DejaVu', os.path.join(font_path, 'DejaVuSans.ttf')))
+        pdfmetrics.registerFont(TTFont('DejaVu-Bold', os.path.join(font_path, 'DejaVuSans-Bold.ttf')))
+        font_name = 'DejaVu'
+        font_bold = 'DejaVu-Bold'
+    except:
+        font_name = 'Helvetica'
+        font_bold = 'Helvetica-Bold'
+
+    # Стилі
+    styles = getSampleStyleSheet()
+
+    # Заголовок документа
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=28,
+        fontName=font_bold,
+        textColor=colors.HexColor('#667eea'),
+        spaceAfter=10,
+        alignment=TA_CENTER,
+        leading=34
+    )
+
+    # Підзаголовок
+    subtitle_style = ParagraphStyle(
+        'Subtitle',
+        parent=styles['Normal'],
+        fontSize=14,
+        fontName=font_name,
+        textColor=colors.HexColor('#718096'),
+        spaceAfter=30,
+        alignment=TA_CENTER
+    )
+
+    # Заголовки секцій
+    heading_style = ParagraphStyle(
+        'CustomHeading',
+        parent=styles['Heading2'],
+        fontSize=18,
+        fontName=font_bold,
+        textColor=colors.HexColor('#667eea'),
+        spaceAfter=15,
+        spaceBefore=25,
+        borderWidth=2,
+        borderColor=colors.HexColor('#667eea'),
+        borderPadding=8,
+        backColor=colors.HexColor('#f7fafc'),
+        borderRadius=5
+    )
+
+    # Підзаголовки днів
+    day_heading_style = ParagraphStyle(
+        'DayHeading',
+        parent=styles['Heading3'],
+        fontSize=14,
+        fontName=font_bold,
+        textColor=colors.HexColor('#2d3748'),
+        spaceAfter=10,
+        spaceBefore=15,
+        leftIndent=10,
+        borderWidth=1,
+        borderColor=colors.HexColor('#cbd5e0'),
+        borderPadding=6,
+        backColor=colors.HexColor('#edf2f7')
+    )
+
+    normal_style = ParagraphStyle(
+        'CustomNormal',
+        parent=styles['Normal'],
+        fontName=font_name,
+        fontSize=10,
+        leading=14
+    )
+
+    # ========== ОБКЛАДИНКА ==========
+
+    # Логотип/Іконка
+    icon_style = ParagraphStyle(
+        'Icon',
+        parent=styles['Normal'],
+        fontSize=48,
+        alignment=TA_CENTER,
+        spaceAfter=20
+    )
+    elements.append(Paragraph("✈", icon_style))
+
+    # Заголовок
+    elements.append(Paragraph(trip.title, title_style))
+
+    # Підзаголовок
+    subtitle_text = f"{trip.destination}"
+    elements.append(Paragraph(subtitle_text, subtitle_style))
+
+    # Декоративна лінія
+    line = Table([['']], colWidths=[18 * cm])
+    line.setStyle(TableStyle([
+        ('LINEABOVE', (0, 0), (-1, 0), 3, colors.HexColor('#667eea')),
+        ('LINEBELOW', (0, 0), (-1, 0), 1, colors.HexColor('#a0aec0'))
+    ]))
+    elements.append(line)
+    elements.append(Spacer(1, 0.5 * cm))
+
+    # ========== ІНФОРМАЦІЙНА КАРТКА ==========
+
+    # Розрахунки
+    trip_duration = (trip.end_date - trip.start_date).days + 1
+
+    info_card_data = [
+        [
+            Paragraph('<b>📅 ДАТИ ПОДОРОЖІ</b>', normal_style),
+            Paragraph(f'{trip.start_date.strftime("%d.%m.%Y")} - {trip.end_date.strftime("%d.%m.%Y")}', normal_style)
+        ],
+        [
+            Paragraph('<b>⏱ ТРИВАЛІСТЬ</b>', normal_style),
+            Paragraph(f'{trip_duration} {trip_duration if trip_duration > 1 else ""} днів', normal_style)
+        ],
+        [
+            Paragraph('<b>💰 БЮДЖЕТ</b>', normal_style),
+            Paragraph(f'{trip.budget:.2f} {CURRENCY_SYMBOLS.get(trip.currency, trip.currency)}', normal_style)
+        ],
+        [
+            Paragraph('<b>📍 НАПРЯМОК</b>', normal_style),
+            Paragraph(trip.destination, normal_style)
+        ]
+    ]
+
+    info_card = Table(info_card_data, colWidths=[5 * cm, 13 * cm])
+    info_card.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#edf2f7')),
+        ('BACKGROUND', (1, 0), (1, -1), colors.white),
+        ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#2d3748')),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('FONTNAME', (0, 0), (-1, -1), font_name),
+        ('FONTSIZE', (0, 0), (-1, -1), 11),
+        ('LEFTPADDING', (0, 0), (-1, -1), 15),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 15),
+        ('TOPPADDING', (0, 0), (-1, -1), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+        ('GRID', (0, 0), (-1, -1), 1.5, colors.HexColor('#cbd5e0')),
+        ('ROWBACKGROUNDS', (1, 0), (1, -1), [colors.white, colors.HexColor('#f7fafc')])
+    ]))
+
+    elements.append(info_card)
+    elements.append(Spacer(1, 1 * cm))
+
+    # ========== МАРШРУТ ПОДОРОЖІ ==========
+
+    from collections import defaultdict
+    activities_by_day = defaultdict(list)
+
+    for activity in trip.activities:
+        activity_date = activity.date.date() if hasattr(activity.date, 'date') else activity.date
+        activities_by_day[activity_date].append(activity)
+
+    if activities_by_day:
+        elements.append(Paragraph("📅 МАРШРУТ ПОДОРОЖІ", heading_style))
+        elements.append(Spacer(1, 0.3 * cm))
+
+        trip_start = trip.start_date.date() if hasattr(trip.start_date, 'date') else trip.start_date
+
+        for day_date in sorted(activities_by_day.keys()):
+            day_activities = activities_by_day[day_date]
+            day_num = (day_date - trip_start).days + 1
+
+            # Заголовок дня
+            day_title = f"🗓 День {day_num} • {day_date.strftime('%d %B %Y')}"
+            elements.append(Paragraph(day_title, day_heading_style))
+            elements.append(Spacer(1, 0.2 * cm))
+
+            # Таблиця активностей
+            activities_data = []
+
+            for activity in day_activities:
+                time_cell = Paragraph(
+                    f'<b>{activity.time or "—"}</b>' if activity.time else '—',
+                    normal_style
+                )
+
+                title_cell = Paragraph(
+                    f'<b>{activity.title}</b>',
+                    normal_style
+                )
+
+                location_cell = Paragraph(
+                    f'📍 {activity.location}' if activity.location else '—',
+                    ParagraphStyle('Location', parent=normal_style, textColor=colors.HexColor('#718096'))
+                )
+
+                cost_cell = Paragraph(
+                    f'<b>{activity.cost:.0f} грн</b>' if activity.cost else '—',
+                    ParagraphStyle('Cost', parent=normal_style, textColor=colors.HexColor('#48bb78'))
+                )
+
+                activities_data.append([time_cell, title_cell, location_cell, cost_cell])
+
+            if activities_data:
+                activities_table = Table(activities_data, colWidths=[2 * cm, 8 * cm, 5 * cm, 3 * cm])
+                activities_table.setStyle(TableStyle([
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                    ('FONTNAME', (0, 0), (-1, -1), font_name),
+                    ('FONTSIZE', (0, 0), (-1, -1), 10),
+                    ('LEFTPADDING', (0, 0), (-1, -1), 10),
+                    ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+                    ('TOPPADDING', (0, 0), (-1, -1), 10),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+                    ('BACKGROUND', (0, 0), (-1, -1), colors.white),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#e2e8f0')),
+                    ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.white, colors.HexColor('#f7fafc')])
+                ]))
+
+                elements.append(activities_table)
+                elements.append(Spacer(1, 0.4 * cm))
+
+    # ========== PACKING LIST ==========
+
+    packing_items = PackingItem.query.filter_by(trip_id=trip.id).all()
+
+    if packing_items:
+        elements.append(PageBreak())
+        elements.append(Paragraph("🎒 СПИСОК РЕЧЕЙ", heading_style))
+        elements.append(Spacer(1, 0.3 * cm))
+
+        # Групуємо по категоріях
+        items_by_category = defaultdict(list)
+
+        category_names = {
+            'clothes': '👕 Одяг',
+            'toiletries': '🧴 Туалетні приналежності',
+            'electronics': '🔌 Електроніка',
+            'documents': '📄 Документи',
+            'other': '📦 Інше'
+        }
+
+        for item in packing_items:
+            cat_name = category_names.get(item.category, item.category)
+            items_by_category[cat_name].append(item)
+
+        for category in sorted(items_by_category.keys()):
+            items = items_by_category[category]
+
+            # Заголовок категорії
+            cat_heading = ParagraphStyle(
+                'CategoryHeading',
+                parent=normal_style,
+                fontSize=12,
+                fontName=font_bold,
+                textColor=colors.HexColor('#4a5568'),
+                spaceAfter=8,
+                spaceBefore=12
+            )
+            elements.append(Paragraph(category, cat_heading))
+
+            # Список речей
+            packing_data = []
+
+            for item in items:
+                checkbox = '☑' if item.is_packed else '☐'
+                item_style = ParagraphStyle(
+                    'ItemStyle',
+                    parent=normal_style,
+                    textColor=colors.HexColor('#a0aec0') if item.is_packed else colors.HexColor('#2d3748')
+                )
+
+                packing_data.append([
+                    Paragraph(checkbox, normal_style),
+                    Paragraph(item.name, item_style),
+                    Paragraph(f'x{item.quantity}', item_style)
+                ])
+
+            packing_table = Table(packing_data, colWidths=[1 * cm, 15 * cm, 2 * cm])
+            packing_table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+                ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+                ('ALIGN', (2, 0), (2, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('FONTNAME', (0, 0), (-1, -1), font_name),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('LEFTPADDING', (0, 0), (-1, -1), 8),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                ('BACKGROUND', (0, 0), (-1, -1), colors.white)
+            ]))
+
+            elements.append(packing_table)
+            elements.append(Spacer(1, 0.2 * cm))
+
+    # ========== НОТАТКИ ==========
+
+    notes = TripNote.query.filter_by(trip_id=trip.id).all()
+
+    if notes:
+        elements.append(PageBreak())
+        elements.append(Paragraph("📝 ВАЖЛИВІ НОТАТКИ", heading_style))
+        elements.append(Spacer(1, 0.3 * cm))
+
+        for note in notes:
+            # Картка нотатки
+            note_data = [[
+                Paragraph(f'<b>{note.title}</b>', normal_style),
+                Paragraph(f'<i>{note.category}</i>',
+                          ParagraphStyle('NoteCategory', parent=normal_style, textColor=colors.HexColor('#718096'),
+                                         fontSize=9, alignment=TA_RIGHT))
+            ]]
+
+            note_header = Table(note_data, colWidths=[14 * cm, 4 * cm])
+            note_header.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#edf2f7')),
+                ('ALIGN', (0, 0), (0, 0), 'LEFT'),
+                ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 12),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+                ('TOPPADDING', (0, 0), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 8)
+            ]))
+
+            elements.append(note_header)
+
+            # Тіло нотатки
+            content_data = [[Paragraph(note.content, normal_style)]]
+            note_body = Table(content_data, colWidths=[18 * cm])
+            note_body.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, -1), colors.white),
+                ('LEFTPADDING', (0, 0), (-1, -1), 12),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+                ('TOPPADDING', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
+                ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#e2e8f0'))
+            ]))
+
+            elements.append(note_body)
+            elements.append(Spacer(1, 0.4 * cm))
+
+    # ========== ЧЕКЛІСТ ==========
+
+    checklist = TripChecklist.query.filter_by(trip_id=trip.id).all()
+
+    if checklist:
+        elements.append(Spacer(1, 0.5 * cm))
+        elements.append(Paragraph("✓ ЧЕКЛІСТ ПІДГОТОВКИ", heading_style))
+        elements.append(Spacer(1, 0.3 * cm))
+
+        checklist_data = []
+
+        for item in checklist:
+            status_icon = '✓' if item.is_completed else '○'
+            status_color = colors.HexColor('#48bb78') if item.is_completed else colors.HexColor('#a0aec0')
+
+            status_style = ParagraphStyle(
+                'Status',
+                parent=normal_style,
+                textColor=status_color,
+                fontSize=14
+            )
+
+            item_style = ParagraphStyle(
+                'CheckItem',
+                parent=normal_style,
+                textColor=colors.HexColor('#a0aec0') if item.is_completed else colors.HexColor('#2d3748')
+            )
+
+            checklist_data.append([
+                Paragraph(status_icon, status_style),
+                Paragraph(item.item, item_style),
+                Paragraph(item.category or '—', item_style),
+                Paragraph(item.due_date.strftime('%d.%m') if item.due_date else '—', item_style)
+            ])
+
+        checklist_table = Table(checklist_data, colWidths=[1.5 * cm, 10 * cm, 4 * cm, 2.5 * cm])
+        checklist_table.setStyle(TableStyle([
+            ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+            ('ALIGN', (1, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('FONTNAME', (0, 0), (-1, -1), font_name),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('LEFTPADDING', (0, 0), (-1, -1), 10),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('BACKGROUND', (0, 0), (-1, -1), colors.white),
+            ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.white, colors.HexColor('#f7fafc')])
+        ]))
+
+        elements.append(checklist_table)
+
+    # ========== ФУТЕР ==========
+
+    elements.append(Spacer(1, 1.5 * cm))
+
+    # Декоративна лінія
+    elements.append(line)
+    elements.append(Spacer(1, 0.3 * cm))
+
+    footer_style = ParagraphStyle(
+        'Footer',
+        parent=styles['Normal'],
+        fontName=font_name,
+        fontSize=9,
+        textColor=colors.HexColor('#a0aec0'),
+        alignment=TA_CENTER
+    )
+
+    footer_text = f"Створено в Travel Planner • {datetime.now().strftime('%d.%m.%Y')} • Гарних подорожей! ✈"
+    elements.append(Paragraph(footer_text, footer_style))
+
+    # Генеруємо PDF
+    doc.build(elements)
+
+    # Повертаємо файл
+    buffer.seek(0)
+    filename = f"trip_{trip.title.replace(' ', '_')}_{trip.start_date.strftime('%Y%m%d')}.pdf"
+
+    return send_file(
+        buffer,
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name=filename
+    )
+
+# Чекліст для поїздки (віза, страховка тощо)
+class TripChecklist(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    item = db.Column(db.String(200), nullable=False)
+    category = db.Column(db.String(50))  # Документи, Бронювання, Підготовка, Інше
+    is_completed = db.Column(db.Boolean, default=False)
+    due_date = db.Column(db.Date, nullable=True)
+    notes = db.Column(db.Text)
+    trip_id = db.Column(db.Integer, db.ForeignKey('trip.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+
+    def __repr__(self):
+        return f'<TripChecklist {self.item}>'
+
+# Видалити шаблон
+@app.route('/templates/<int:template_id>/delete', methods=['POST'])
+@login_required
+def delete_template(template_id):
+    template = TripTemplate.query.get_or_404(template_id)
+
+    if template.user_id != current_user.id:
+        flash('У вас немає доступу до цього шаблону', 'danger')
+        return redirect(url_for('templates_list'))
+
+    db.session.delete(template)
+    db.session.commit()
+
+    flash('Шаблон видалено', 'info')
+    return redirect(url_for('templates_list'))
+
 # Редагування поїздки
 @app.route('/trip/<int:trip_id>/edit', methods=['GET', 'POST'])
 @login_required
@@ -672,6 +1368,177 @@ def edit_trip(trip_id):
 
     return render_template('trip_edit.html', trip=trip)
 
+
+# ==================== НОТАТКИ ====================
+
+# Сторінка з нотатками та чеклістом
+@app.route('/trip/<int:trip_id>/notes')
+@login_required
+def trip_notes(trip_id):
+    trip = Trip.query.get_or_404(trip_id)
+
+    if trip.user_id != current_user.id:
+        flash('У вас немає доступу до цієї поїздки', 'danger')
+        return redirect(url_for('dashboard'))
+
+    notes = TripNote.query.filter_by(trip_id=trip_id).order_by(TripNote.is_pinned.desc(),
+                                                               TripNote.created_at.desc()).all()
+    checklist_items = TripChecklist.query.filter_by(trip_id=trip_id).order_by(TripChecklist.is_completed,
+                                                                              TripChecklist.due_date).all()
+
+    # Групуємо чекліст по категоріях
+    from collections import defaultdict
+    checklist_by_category = defaultdict(list)
+    for item in checklist_items:
+        checklist_by_category[item.category or 'Інше'].append(item)
+
+    # Статистика чекліста
+    total_items = len(checklist_items)
+    completed_items = len([item for item in checklist_items if item.is_completed])
+    completion_percentage = (completed_items / total_items * 100) if total_items > 0 else 0
+
+    return render_template('trip_notes.html',
+                           trip=trip,
+                           notes=notes,
+                           checklist_by_category=dict(checklist_by_category),
+                           total_items=total_items,
+                           completed_items=completed_items,
+                           completion_percentage=completion_percentage)
+
+
+# Додати нотатку
+@app.route('/trip/<int:trip_id>/notes/add', methods=['POST'])
+@login_required
+def add_note(trip_id):
+    trip = Trip.query.get_or_404(trip_id)
+
+    if trip.user_id != current_user.id:
+        flash('У вас немає доступу до цієї поїздки', 'danger')
+        return redirect(url_for('dashboard'))
+
+    title = request.form.get('title')
+    content = request.form.get('content')
+    category = request.form.get('category', 'Загальне')
+    is_pinned = request.form.get('is_pinned') == 'on'
+
+    note = TripNote(
+        title=title,
+        content=content,
+        category=category,
+        is_pinned=is_pinned,
+        trip_id=trip_id
+    )
+
+    db.session.add(note)
+    db.session.commit()
+
+    flash('Нотатку додано!', 'success')
+    return redirect(url_for('trip_notes', trip_id=trip_id))
+
+
+# Редагувати нотатку
+@app.route('/trip/<int:trip_id>/notes/<int:note_id>/edit', methods=['POST'])
+@login_required
+def edit_note(trip_id, note_id):
+    note = TripNote.query.get_or_404(note_id)
+
+    if note.trip.user_id != current_user.id:
+        flash('У вас немає доступу', 'danger')
+        return redirect(url_for('dashboard'))
+
+    note.title = request.form.get('title')
+    note.content = request.form.get('content')
+    note.category = request.form.get('category')
+    note.is_pinned = request.form.get('is_pinned') == 'on'
+    note.updated_at = datetime.now()
+
+    db.session.commit()
+
+    flash('Нотатку оновлено!', 'success')
+    return redirect(url_for('trip_notes', trip_id=trip_id))
+
+
+# Видалити нотатку
+@app.route('/trip/<int:trip_id>/notes/<int:note_id>/delete', methods=['POST'])
+@login_required
+def delete_note(trip_id, note_id):
+    note = TripNote.query.get_or_404(note_id)
+
+    if note.trip.user_id != current_user.id:
+        flash('У вас немає доступу', 'danger')
+        return redirect(url_for('dashboard'))
+
+    db.session.delete(note)
+    db.session.commit()
+
+    flash('Нотатку видалено', 'info')
+    return redirect(url_for('trip_notes', trip_id=trip_id))
+
+
+# ==================== ЧЕКЛІСТ ====================
+
+# Додати пункт чекліста
+@app.route('/trip/<int:trip_id>/checklist/add', methods=['POST'])
+@login_required
+def add_checklist_item(trip_id):
+    trip = Trip.query.get_or_404(trip_id)
+
+    if trip.user_id != current_user.id:
+        flash('У вас немає доступу', 'danger')
+        return redirect(url_for('dashboard'))
+
+    item = request.form.get('item')
+    category = request.form.get('category', 'Інше')
+    due_date_str = request.form.get('due_date')
+    notes = request.form.get('notes')
+
+    due_date = datetime.strptime(due_date_str, '%Y-%m-%d').date() if due_date_str else None
+
+    checklist_item = TripChecklist(
+        item=item,
+        category=category,
+        due_date=due_date,
+        notes=notes,
+        trip_id=trip_id
+    )
+
+    db.session.add(checklist_item)
+    db.session.commit()
+
+    flash('Пункт додано до чекліста!', 'success')
+    return redirect(url_for('trip_notes', trip_id=trip_id))
+
+
+# Відмітити пункт чекліста
+@app.route('/trip/<int:trip_id>/checklist/<int:item_id>/toggle', methods=['POST'])
+@login_required
+def toggle_checklist_item(trip_id, item_id):
+    item = TripChecklist.query.get_or_404(item_id)
+
+    if item.trip.user_id != current_user.id:
+        return {'success': False}, 403
+
+    item.is_completed = not item.is_completed
+    db.session.commit()
+
+    return {'success': True, 'completed': item.is_completed}
+
+
+# Видалити пункт чекліста
+@app.route('/trip/<int:trip_id>/checklist/<int:item_id>/delete', methods=['POST'])
+@login_required
+def delete_checklist_item(trip_id, item_id):
+    item = TripChecklist.query.get_or_404(item_id)
+
+    if item.trip.user_id != current_user.id:
+        flash('У вас немає доступу', 'danger')
+        return redirect(url_for('dashboard'))
+
+    db.session.delete(item)
+    db.session.commit()
+
+    flash('Пункт видалено', 'info')
+    return redirect(url_for('trip_notes', trip_id=trip_id))
 
 # Видалення поїздки
 @app.route('/trip/<int:trip_id>/delete', methods=['POST'])
@@ -1061,6 +1928,26 @@ def clear_packed_items(trip_id):
     flash('Зібрані речі видалено зі списку', 'info')
     return redirect(url_for('packing_list', trip_id=trip.id))
 
+
+# Модель шаблону поїздки
+class TripTemplate(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    destination_type = db.Column(db.String(100))  # Пляж, Гори, Місто тощо
+    duration_days = db.Column(db.Integer)
+    budget_estimate = db.Column(db.Float)
+    currency = db.Column(db.String(3), default='UAH')
+    is_public = db.Column(db.Boolean, default=False)  # Публічний шаблон чи особистий
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    source_trip_id = db.Column(db.Integer, db.ForeignKey('trip.id'), nullable=True)  # З якої поїздки створено
+    created_at = db.Column(db.DateTime, default=datetime.now)
+
+    # Зберігаємо дані як JSON
+    activities_template = db.Column(db.Text)  # JSON список активностей
+    packing_template = db.Column(db.Text)  # JSON списку речей
+
+    user = db.relationship('User', backref='templates')
 
 # Список готелів
 @app.route('/trip/<int:trip_id>/accommodations')

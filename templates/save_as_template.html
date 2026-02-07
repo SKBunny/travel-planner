@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Зберегти як шаблон - Travel Planner{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card shadow-lg">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-save"></i> Зберегти поїздку як шаблон</h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    Збережіть цю поїздку як шаблон для швидкого створення подібних поїздок у майбутньому.
+                    Шаблон збереже активності та список речей.
+                </div>
+
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="template_name" class="form-label">Назва шаблону *</label>
+                        <input type="text" class="form-control" id="template_name" name="template_name" 
+                               value="Шаблон: {{ trip.title }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Опис</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" 
+                                  placeholder="Опишіть для яких поїздок підходить цей шаблон..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <h6>Що буде збережено:</h6>
+                        <ul class="list-unstyled">
+                            <li><i class="bi bi-check-circle text-success"></i> Тривалість: {{ (trip.end_date - trip.start_date).days + 1 }} днів</li>
+                            <li><i class="bi bi-check-circle text-success"></i> Бюджет: {{ trip.budget }} {{ trip.currency }}</li>
+                            <li><i class="bi bi-check-circle text-success"></i> Активності: {{ trip.activities|length }} шт</li>
+                            <li><i class="bi bi-check-circle text-success"></i> Список речей</li>
+                        </ul>
+                    </div>
+
+                    <div class="form-check mb-4">
+                        <input class="form-check-input" type="checkbox" id="is_public" name="is_public">
+                        <label class="form-check-label" for="is_public">
+                            Зробити шаблон публічним (інші користувачі зможуть його використовувати)
+                        </label>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-save"></i> Зберегти шаблон
+                        </button>
+                        <a href="{{ url_for('view_trip', trip_id=trip.id) }}" class="btn btn-outline-secondary">
+                            Скасувати
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

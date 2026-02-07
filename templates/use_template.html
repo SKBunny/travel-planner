@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Створити з шаблону - Travel Planner{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-lg">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-file-earmark-plus"></i> Створити поїздку з шаблону</h4>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-4">
+                    <h6 class="mb-2"><i class="bi bi-info-circle"></i> Шаблон: {{ template.name }}</h6>
+                    {% if template.description %}
+                        <p class="mb-0 small">{{ template.description }}</p>
+                    {% endif %}
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="text-center p-3 bg-light rounded">
+                            <i class="bi bi-calendar-check text-primary" style="font-size: 2rem;"></i>
+                            <h5 class="mt-2 mb-0">{{ template.duration_days }}</h5>
+                            <small class="text-muted">{{ template.duration_days|plural('День', 'Дні', 'Днів') }}</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center p-3 bg-light rounded">
+                            <i class="bi bi-wallet text-success" style="font-size: 2rem;"></i>
+                            <h5 class="mt-2 mb-0">{{ template.budget_estimate }}</h5>
+                            <small class="text-muted">{{ currency_symbols[template.currency] }}</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="text-center p-3 bg-light rounded">
+                            <i class="bi bi-list-check text-info" style="font-size: 2rem;"></i>
+                            <h5 class="mt-2 mb-0">Готово</h5>
+                            <small class="text-muted">Активності + Речі</small>
+                        </div>
+                    </div>
+                </div>
+
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Назва поїздки *</label>
+                        <input type="text" class="form-control" id="title" name="title" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="destination" class="form-label">Напрямок *</label>
+                        <input type="text" class="form-control" id="destination" name="destination" 
+                               value="{{ template.destination_type }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="start_date" class="form-label">Дата початку *</label>
+                        <input type="date" class="form-control" id="start_date" name="start_date" required>
+                        <small class="text-muted">Тривалість: {{ template.duration_days }} {{ template.duration_days|plural('день', 'дні', 'днів') }}</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="budget" class="form-label">Бюджет *</label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" id="budget" name="budget" 
+                                   value="{{ template.budget_estimate }}" step="0.01" required>
+                            <span class="input-group-text">{{ currency_symbols[template.currency] }}</span>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-check-circle"></i> Створити поїздку
+                        </button>
+                        <a href="{{ url_for('templates_list') }}" class="btn btn-outline-secondary">
+                            Назад до шаблонів
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
