@@ -2,7 +2,7 @@ from flask import Flask, render_template, redirect, url_for, flash, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, timedelta
 from reportlab.lib.pagesizes import A4, letter
 from reportlab.lib import colors
 from reportlab.lib.units import cm
@@ -12,7 +12,7 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from io import BytesIO
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file, send_from_directory, session
 from flask import send_from_directory
 import requests
 from dotenv import load_dotenv
@@ -227,14 +227,24 @@ def format_currency(amount, currency):
     """Форматує суму з символом валюти"""
     symbol = CURRENCY_SYMBOLS.get(currency, currency)
     return f"{amount:.2f} {symbol}"
+# Ініціалізація Flask
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-here-change-in-production'
+app.config['SECRET_KEY'] = 'dev-secret-key-travel-planner-2026'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///travel_planner.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SESSION_COOKIE_SECURE'] = False
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+app.config['REMEMBER_COOKIE_DURATION'] = timedelta(days=30)
 
+# Ініціалізація SQLAlchemy
 db = SQLAlchemy(app)
+
+# Ініціалізація Flask-Login
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
+login_manager.session_protection = "strong"
 
 
 # Фільтр для відмінювання слів
@@ -410,8 +420,9 @@ def login():
         user = User.query.filter_by(email=email).first()
 
         if user and check_password_hash(user.password, password):
-            login_user(user)
-            flash('Успішний вхід!', 'success')
+            login_user(user, remember=True)
+            session.permanent = True  # ← Робить сесію постійною
+            flash('Ви успішно увійшли!', 'success')
             return redirect(url_for('dashboard'))
         else:
             flash('Невірний email або пароль', 'danger')
@@ -855,6 +866,198 @@ def parse_city_country(destination):
         return parts[0], ''  # тільки місто
 
 
+# ==================== ГЛОБАЛЬНИЙ ПОШУК ====================
+
+@app.route('/search')
+@login_required
+def global_search():
+    query = request.args.get('q', '').strip()
+
+    if not query:
+        return render_template('search_results.html',
+                               query='',
+                               trips=[],
+                               activities=[],
+                               notes=[],
+                               accommodations=[])
+
+    # Пошук в нижньому регістрі
+    search_term = f"%{query.lower()}%"
+
+    # Пошук поїздок
+    trips = Trip.query.filter(
+        Trip.user_id == current_user.id
+    ).filter(
+        db.or_(
+            Trip.title.ilike(search_term),
+            Trip.destination.ilike(search_term)
+        )
+    ).all()
+
+    # Пошук активностей
+    activities = Activity.query.join(Trip).filter(
+        Trip.user_id == current_user.id
+    ).filter(
+        db.or_(
+            Activity.title.ilike(search_term),
+            Activity.description.ilike(search_term),
+            Activity.location.ilike(search_term)
+        )
+    ).all()
+
+    # Пошук нотаток
+    notes = TripNote.query.join(Trip).filter(
+        Trip.user_id == current_user.id
+    ).filter(
+        db.or_(
+            TripNote.title.ilike(search_term),
+            TripNote.content.ilike(search_term)
+        )
+    ).all()
+
+    # Пошук готелів
+    accommodations = Accommodation.query.join(Trip).filter(
+        Trip.user_id == current_user.id
+    ).filter(
+        db.or_(
+            Accommodation.name.ilike(search_term),
+            Accommodation.address.ilike(search_term)
+        )
+    ).all()
+
+    return render_template('search_results.html',
+                           query=query,
+                           trips=trips,
+                           activities=activities,
+                           notes=notes,
+                           accommodations=accommodations)
+
+
+# Швидкий пошук (API для autocomplete)
+@app.route('/api/quick-search')
+@login_required
+def quick_search():
+    query = request.args.get('q', '').strip()
+
+    if not query or len(query) < 2:
+        return {'results': []}
+
+    search_term = f"%{query.lower()}%"
+    results = []
+
+    # Пошук поїздок (топ 3)
+    trips = Trip.query.filter(
+        Trip.user_id == current_user.id
+    ).filter(
+        db.or_(
+            Trip.title.ilike(search_term),
+            Trip.destination.ilike(search_term)
+        )
+    ).limit(3).all()
+
+    for trip in trips:
+        results.append({
+            'type': 'trip',
+            'id': trip.id,
+            'title': trip.title,
+            'subtitle': trip.destination,
+            'url': url_for('view_trip', trip_id=trip.id),
+            'icon': '🗺️'
+        })
+
+    # Пошук активностей (топ 3)
+    activities = Activity.query.join(Trip).filter(
+        Trip.user_id == current_user.id
+    ).filter(
+        Activity.title.ilike(search_term)
+    ).limit(3).all()
+
+    for activity in activities:
+        results.append({
+            'type': 'activity',
+            'id': activity.id,
+            'title': activity.title,
+            'subtitle': f"{activity.trip.title} • {activity.date.strftime('%d.%m.%Y')}",
+            'url': url_for('view_trip', trip_id=activity.trip_id),
+            'icon': '📍'
+        })
+
+    # Пошук нотаток (топ 3)
+    notes = TripNote.query.join(Trip).filter(
+        Trip.user_id == current_user.id
+    ).filter(
+        db.or_(
+            TripNote.title.ilike(search_term),
+            TripNote.content.ilike(search_term)
+        )
+    ).limit(3).all()
+
+    for note in notes:
+        results.append({
+            'type': 'note',
+            'id': note.id,
+            'title': note.title,
+            'subtitle': note.trip.title,
+            'url': url_for('trip_notes', trip_id=note.trip_id),
+            'icon': '📝'
+        })
+
+    return {'results': results[:9]}  # Максимум 9 результатів
+
+
+# Рекомендації на основі історії
+@app.route('/recommendations')
+@login_required
+def recommendations():
+    # Аналізуємо історію подорожей
+    trips = Trip.query.filter_by(user_id=current_user.id).all()
+
+    # Найчастіші напрямки
+    destinations = {}
+    for trip in trips:
+        dest = trip.destination
+        destinations[dest] = destinations.get(dest, 0) + 1
+
+    top_destinations = sorted(destinations.items(), key=lambda x: x[1], reverse=True)[:5]
+
+    # Середній бюджет
+    if trips:
+        avg_budget = sum(t.budget * CURRENCY_RATES.get(t.currency, 1) for t in trips) / len(trips)
+    else:
+        avg_budget = 0
+
+    # Середня тривалість
+    if trips:
+        avg_duration = sum((t.end_date - t.start_date).days + 1 for t in trips) / len(trips)
+    else:
+        avg_duration = 0
+
+    # Популярні категорії активностей
+    activities = Activity.query.join(Trip).filter(Trip.user_id == current_user.id).all()
+
+    categories = {}
+    for activity in activities:
+        cat = activity.category
+        categories[cat] = categories.get(cat, 0) + 1
+
+    top_categories = sorted(categories.items(), key=lambda x: x[1], reverse=True)[:5]
+
+    # Рекомендації напрямків (прості - можна підключити реальний API)
+    recommendations_list = [
+        {'city': 'Львів', 'country': 'Україна', 'reason': 'Популярно серед користувачів', 'budget': 5000},
+        {'city': 'Краків', 'country': 'Польща', 'reason': 'Близько до України', 'budget': 8000},
+        {'city': 'Будапешт', 'country': 'Угорщина', 'reason': 'Культурна столиця', 'budget': 10000},
+        {'city': 'Стамбул', 'country': 'Туреччина', 'reason': 'Екзотика та історія', 'budget': 12000},
+        {'city': 'Прага', 'country': 'Чехія', 'reason': 'Архітектурна краса', 'budget': 15000},
+    ]
+
+    return render_template('recommendations.html',
+                           top_destinations=top_destinations,
+                           avg_budget=avg_budget,
+                           avg_duration=avg_duration,
+                           top_categories=top_categories,
+                           recommendations=recommendations_list)
+
 # Конвертер валют
 @app.route('/converter')
 @login_required
@@ -1217,6 +1420,7 @@ class TripNote(db.Model):
     trip_id = db.Column(db.Integer, db.ForeignKey('trip.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    trip = db.relationship('Trip', backref='notes_list')
 
     def __repr__(self):
         return f'<TripNote {self.title}>'

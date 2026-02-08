@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}Пошук{% if query %}: {{ query }}{% endif %} - Travel Planner{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="mb-3">
+            <i class="bi bi-search"></i> Результати пошуку
+            {% if query %}<span class="text-muted">: "{{ query }}"</span>{% endif %}
+        </h1>
+        
+        <!-- Форма пошуку -->
+        <form action="{{ url_for('global_search') }}" method="GET" class="mb-4">
+            <div class="input-group input-group-lg">
+                <span class="input-group-text">
+                    <i class="bi bi-search"></i>
+                </span>
+                <input type="search" 
+                       class="form-control" 
+                       name="q" 
+                       value="{{ query }}"
+                       placeholder="Пошук поїздок, активностей, нотаток..."
+                       autofocus>
+                <button type="submit" class="btn btn-primary">Шукати</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if query %}
+    <!-- Статистика -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info">
+                Знайдено: 
+                <strong>{{ trips|length }}</strong> {{ trips|length|plural('поїздка', 'поїздки', 'поїздок') }}, 
+                <strong>{{ activities|length }}</strong> {{ activities|length|plural('активність', 'активності', 'активностей') }}, 
+                <strong>{{ notes|length }}</strong> {{ notes|length|plural('нотатка', 'нотатки', 'нотаток') }}, 
+                <strong>{{ accommodations|length }}</strong> {{ accommodations|length|plural('готель', 'готелі', 'готелів') }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Поїздки -->
+    {% if trips %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-suitcase-lg"></i> Поїздки ({{ trips|length }})</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for trip in trips %}
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card trip-card h-100">
+                        <div class="card-body">
+                            <h6 class="card-title">{{ trip.title }}</h6>
+                            <p class="card-text">
+                                <i class="bi bi-geo-alt"></i> {{ trip.destination }}<br>
+                                <i class="bi bi-calendar-range"></i> {{ trip.start_date.strftime('%d.%m.%Y') }} - {{ trip.end_date.strftime('%d.%m.%Y') }}
+                            </p>
+                            <a href="{{ url_for('view_trip', trip_id=trip.id) }}" class="btn btn-primary btn-sm">
+                                Відкрити
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Активності -->
+    {% if activities %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="bi bi-calendar-check"></i> Активності ({{ activities|length }})</h5>
+        </div>
+        <div class="card-body">
+            <div class="list-group">
+                {% for activity in activities %}
+                <a href="{{ url_for('view_trip', trip_id=activity.trip_id) }}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">{{ activity.title }}</h6>
+                        <small>{{ activity.date.strftime('%d.%m.%Y') }}</small>
+                    </div>
+                    <p class="mb-1 text-muted">
+                        {{ activity.trip.title }}
+                        {% if activity.location %}• {{ activity.location }}{% endif %}
+                    </p>
+                    {% if activity.description %}
+                    <small class="text-muted">{{ activity.description[:100] }}{% if activity.description|length > 100 %}...{% endif %}</small>
+                    {% endif %}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Нотатки -->
+    {% if notes %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-warning text-white">
+            <h5 class="mb-0"><i class="bi bi-journal-text"></i> Нотатки ({{ notes|length }})</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for note in notes %}
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h6 class="card-title mb-0">{{ note.title }}</h6>
+                                <span class="badge bg-info">{{ note.category }}</span>
+                            </div>
+                            <p class="card-text text-muted">{{ note.content[:150] }}{% if note.content|length > 150 %}...{% endif %}</p>
+                            <a href="{{ url_for('trip_notes', trip_id=note.trip_id) }}" class="btn btn-sm btn-outline-primary">
+                                Переглянути в {{ note.trip.title }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Готелі -->
+    {% if accommodations %}
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="bi bi-building"></i> Готелі ({{ accommodations|length }})</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for acc in accommodations %}
+                <div class="col-md-6 col-lg-4 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h6 class="card-title">{{ acc.name }}</h6>
+                            <p class="card-text">
+                                {% if acc.address %}<i class="bi bi-geo-alt"></i> {{ acc.address }}<br>{% endif %}
+                                <i class="bi bi-calendar-range"></i> {{ acc.check_in.strftime('%d.%m.%Y') }} - {{ acc.check_out.strftime('%d.%m.%Y') }}
+                            </p>
+                            <a href="{{ url_for('accommodations_list', trip_id=acc.trip_id) }}" class="btn btn-sm btn-outline-info">
+                                Переглянути в {{ acc.trip.title }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Нічого не знайдено -->
+    {% if not trips and not activities and not notes and not accommodations %}
+    <div class="text-center py-5">
+        <i class="bi bi-search" style="font-size: 4rem; color: #cbd5e0;"></i>
+        <h4 class="mt-3 mb-2">Нічого не знайдено</h4>
+        <p class="text-muted mb-4">Спробуйте інший запит або перевірте правопис</p>
+        <a href="{{ url_for('recommendations') }}" class="btn btn-primary">
+            <i class="bi bi-lightbulb"></i> Переглянути рекомендації
+        </a>
+    </div>
+    {% endif %}
+
+{% else %}
+    <!-- Підказки для пошуку -->
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow-sm">
+                <div class="card-body p-5 text-center">
+                    <i class="bi bi-search" style="font-size: 3rem; color: var(--primary-color);"></i>
+                    <h4 class="mt-3 mb-3">Знайдіть все в одному місці</h4>
+                    <p class="text-muted mb-4">Шукайте по поїздках, активностях, нотатках та готелях</p>
+                    
+                    <div class="text-start">
+                        <h6 class="mb-3">Приклади пошуку:</h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-2"><i class="bi bi-search text-primary"></i> <code>Париж</code> - знайде поїздки до Парижа</li>
+                            <li class="mb-2"><i class="bi bi-search text-primary"></i> <code>музей</code> - знайде активності в музеях</li>
+                            <li class="mb-2"><i class="bi bi-search text-primary"></i> <code>готель</code> - знайде всі готелі</li>
+                            <li class="mb-2"><i class="bi bi-search text-primary"></i> <code>віза</code> - знайде нотатки про візи</li>
+                        </ul>
+                    </div>
+                    
+                    <a href="{{ url_for('recommendations') }}" class="btn btn-outline-primary mt-3">
+                        <i class="bi bi-lightbulb"></i> Отримати рекомендації
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+{% endblock %}

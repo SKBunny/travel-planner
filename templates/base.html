@@ -4,312 +4,214 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Travel Planner{% endblock %}</title>
+
+    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
-    <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#667eea">
-    <meta name="description" content="Планувальник подорожей - організуйте свої поїздки легко">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Travel Planner">
-
-    <!-- Manifest -->
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-
-    <!-- Apple Touch Icons -->
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/icon-152x152.png') }}">
-    <link rel="apple-touch-icon" sizes="152x152" href="{{ url_for('static', filename='images/icon-152x152.png') }}">
-    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='images/icon-192x192.png') }}">
-
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='images/icon-72x72.png') }}">
-
-    <!-- Existing CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark fixed-top custom-navbar">
-        <div class="container">
-            <a class="navbar-brand brand-logo" href="{{ url_for('index') }}">
-                <span class="brand-icon">✈️</span>
-                <span class="brand-text">Travel<span class="brand-highlight">Planner</span></span>
-            </a>
 
-            <!-- Theme Switcher -->
-            <button class="btn btn-sm theme-toggle ms-3" id="themeToggle" onclick="toggleTheme()">
-                <i class="bi bi-moon-stars" id="themeIcon"></i>
-            </button>
+<!-- Navigation -->
+<nav class="navbar navbar-expand-lg custom-navbar fixed-top">
+    <div class="container-fluid">
+        <a class="navbar-brand brand-logo" href="{{ url_for('index') }}">
+            <span class="brand-icon">✈️</span>
+            <span class="brand-text">Travel<span class="brand-highlight">Planner</span></span>
+        </a>
 
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
 
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto align-items-center">
+        <div class="collapse navbar-collapse" id="navbarNav">
+            {% if current_user.is_authenticated %}
+                <!-- Пошук -->
+                <form class="d-none d-lg-flex mx-3" style="position: relative; max-width: 400px;" action="{{ url_for('global_search') }}" method="GET">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white">
+                            <i class="bi bi-search text-primary"></i>
+                        </span>
+                        <input type="search"
+                               class="form-control border-start-0"
+                               name="q"
+                               id="globalSearch"
+                               placeholder="Пошук... (Ctrl+K)"
+                               autocomplete="off"
+                               style="box-shadow: none;">
+                    </div>
+                    <div id="quickResults" class="quick-search-results" style="display: none;"></div>
+                </form>
+
+                <!-- Меню -->
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-custom" href="{{ url_for('dashboard') }}">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-custom" href="{{ url_for('trip_calendar') }}">
+                            <i class="bi bi-calendar3"></i> Календар
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-custom" href="{{ url_for('currency_converter') }}">
+                            <i class="bi bi-currency-exchange"></i> Валюта
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-custom" href="{{ url_for('templates_list') }}">
+                            <i class="bi bi-file-earmark-text"></i> Шаблони
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-custom" href="{{ url_for('achievements_page') }}">
+                            <i class="bi bi-trophy"></i> Досягнення
+                        </a>
+                    </li>
+                    <!-- Dropdown користувача -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle nav-link-custom"
+                           href="#"
+                           id="userDropdown"
+                           role="button"
+                           data-bs-toggle="dropdown"
+                           aria-expanded="false">
+                            <i class="bi bi-person-circle"></i> {{ current_user.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('user_profile') }}">
+                                    <i class="bi bi-person"></i> Профіль
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('logout') }}">
+                                    <i class="bi bi-box-arrow-right"></i> Вийти
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            {% else %}
+                <!-- Меню для незалогінених -->
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link nav-link-custom" href="{{ url_for('login') }}">
+                            <i class="bi bi-box-arrow-in-right"></i> Увійти
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link btn btn-primary text-white" href="{{ url_for('register') }}">
+                            <i class="bi bi-person-plus"></i> Реєстрація
+                        </a>
+                    </li>
+                </ul>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+<!-- Main Content -->
+<main class="main-content">
+    <div class="container">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {% if category == 'success' %}
+                                <i class="bi bi-check-circle-fill"></i>
+                            {% elif category == 'danger' %}
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                            {% elif category == 'warning' %}
+                                <i class="bi bi-exclamation-circle-fill"></i>
+                            {% else %}
+                                <i class="bi bi-info-circle-fill"></i>
+                            {% endif %}
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+</main>
+
+<!-- Footer -->
+<footer class="custom-footer">
+    <div class="container footer-content">
+        <div class="row">
+            <div class="col-lg-4 mb-4 mb-lg-0">
+                <div class="footer-brand">
+                    <h3>✈️ TravelPlanner</h3>
+                    <p class="mt-3">Ваш надійний помічник у плануванні незабутніх подорожей.</p>
+                </div>
+            </div>
+
+            <div class="col-lg-2 col-md-6 mb-4 mb-lg-0">
+                <h5 class="footer-title">Навігація</h5>
+                <ul class="footer-links">
+                    <li><a href="{{ url_for('index') }}">Головна</a></li>
                     {% if current_user.is_authenticated %}
-                        <li class="nav-item">
-                            <a class="nav-link nav-link-custom" href="{{ url_for('dashboard') }}">
-                                <i class="bi bi-grid-3x3-gap"></i> Мої поїздки
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link nav-link-custom" href="{{ url_for('achievements_page') }}">
-                                <i class="bi bi-trophy"></i> Досягнення
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link nav-link-custom" href="{{ url_for('trip_calendar') }}">
-                                <i class="bi bi-calendar3"></i> Календар
-                             </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link nav-link-custom" href="{{ url_for('currency_converter') }}">
-                                <i class="bi bi-currency-exchange"></i> Валюта
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link nav-link-custom" href="{{ url_for('templates_list') }}">
-                                <i class="bi bi-file-earmark-text"></i> Шаблони
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link nav-link-custom" href="{{ url_for('new_trip') }}">
-                                <i class="bi bi-plus-circle-fill"></i> Нова поїздка
-                            </a>
-                        </li>
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle nav-link-custom" href="#" role="button" data-bs-toggle="dropdown">
-                                <i class="bi bi-person-circle"></i> {{ current_user.username }}
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end custom-dropdown">
-                                <li>
-                                    <a class="dropdown-item" href="{{ url_for('user_profile') }}">
-                                        <i class="bi bi-person-badge"></i> Профіль
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{{ url_for('dashboard') }}">
-                                        <i class="bi bi-speedometer2"></i> Dashboard
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
-                                        <i class="bi bi-box-arrow-right"></i> Вихід
-                                    </a>
-                                </li>
-                            </ul>
-                        </li>
+                        <li><a href="{{ url_for('dashboard') }}">Мої поїздки</a></li>
+                        <li><a href="{{ url_for('new_trip') }}">Нова поїздка</a></li>
                     {% else %}
-                        <li class="nav-item">
-                            <a class="nav-link nav-link-custom" href="{{ url_for('index') }}">
-                                <i class="bi bi-house-door"></i> Головна
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link nav-link-custom" href="{{ url_for('login') }}">
-                                <i class="bi bi-box-arrow-in-right"></i> Вхід
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="btn btn-gradient-primary btn-sm ms-2" href="{{ url_for('register') }}">
-                                <i class="bi bi-person-plus"></i> Реєстрація
-                            </a>
-                        </li>
+                        <li><a href="{{ url_for('login') }}">Вхід</a></li>
+                        <li><a href="{{ url_for('register') }}">Реєстрація</a></li>
                     {% endif %}
                 </ul>
             </div>
-        </div>
-    </nav>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <div class="container">
-            <!-- Flash Messages -->
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    <div class="flash-messages">
-                        {% for category, message in messages %}
-                            <div class="alert alert-{{ category }} alert-dismissible fade show custom-alert" role="alert">
-                                <div class="alert-content">
-                                    {% if category == 'success' %}
-                                        <i class="bi bi-check-circle-fill"></i>
-                                    {% elif category == 'danger' %}
-                                        <i class="bi bi-exclamation-triangle-fill"></i>
-                                    {% elif category == 'warning' %}
-                                        <i class="bi bi-exclamation-circle-fill"></i>
-                                    {% else %}
-                                        <i class="bi bi-info-circle-fill"></i>
-                                    {% endif %}
-                                    <span>{{ message }}</span>
-                                </div>
-                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% endif %}
-            {% endwith %}
-
-            {% block content %}{% endblock %}
-        </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="custom-footer">
-        <div class="container footer-content">
-            <div class="row">
-                <div class="col-lg-4 mb-4 mb-lg-0">
-                    <div class="footer-brand">
-                        <h3>✈️ TravelPlanner</h3>
-                        <p class="mt-3">Ваш надійний помічник у плануванні незабутніх подорожей. Створюйте маршрути, контролюйте бюджет, насолоджуйтесь життям!</p>
-                    </div>
-                </div>
-
-                <div class="col-lg-2 col-md-6 mb-4 mb-lg-0">
-                    <h5 class="footer-title">Навігація</h5>
-                    <ul class="footer-links">
-                        <li><a href="{{ url_for('index') }}">Головна</a></li>
-                        {% if current_user.is_authenticated %}
-                            <li><a href="{{ url_for('dashboard') }}">Мої поїздки</a></li>
-                            <li><a href="{{ url_for('new_trip') }}">Нова поїздка</a></li>
-                        {% else %}
-                            <li><a href="{{ url_for('login') }}">Вхід</a></li>
-                            <li><a href="{{ url_for('register') }}">Реєстрація</a></li>
-                        {% endif %}
-                    </ul>
-                </div>
-
-                <div class="col-lg-3 col-md-6 mb-4 mb-lg-0">
-                    <h5 class="footer-title">Можливості</h5>
-                    <ul class="footer-links">
-                        <li><a href="#">Планування маршрутів</a></li>
-                        <li><a href="#">Контроль бюджету</a></li>
-                        <li><a href="#">Статистика</a></li>
-                        <li><a href="#">Трекінг активностей</a></li>
-                    </ul>
-                </div>
-
-                <div class="col-lg-3 col-md-6">
-                    <h5 class="footer-title">Слідкуйте за нами</h5>
-                    <div class="social-links">
-                        <a href="#" class="social-link"><i class="bi bi-facebook"></i></a>
-                        <a href="#" class="social-link"><i class="bi bi-instagram"></i></a>
-                        <a href="#" class="social-link"><i class="bi bi-twitter"></i></a>
-                        <a href="#" class="social-link"><i class="bi bi-youtube"></i></a>
-                    </div>
-                    <p class="mt-3 small">Отримуйте поради для подорожей та оновлення!</p>
-                </div>
+            <div class="col-lg-3 col-md-6 mb-4 mb-lg-0">
+                <h5 class="footer-title">Можливості</h5>
+                <ul class="footer-links">
+                    <li><a href="#">Планування маршрутів</a></li>
+                    <li><a href="#">Контроль бюджету</a></li>
+                    <li><a href="#">Статистика</a></li>
+                    <li><a href="#">Досягнення</a></li>
+                </ul>
             </div>
 
-            <hr class="footer-divider">
-
-            <div class="row align-items-center">
-                <div class="col-md-6 text-center text-md-start">
-                    <p class="mb-0">&copy; 2024 TravelPlanner. Всі права захищені.</p>
-                </div>
-                <div class="col-md-6 text-center text-md-end">
-                    <p class="mb-0">Зроблено з <i class="bi bi-heart-fill text-danger"></i> для мандрівників</p>
+            <div class="col-lg-3 col-md-6">
+                <h5 class="footer-title">Контакти</h5>
+                <div class="social-links">
+                    <a href="#" class="social-link"><i class="bi bi-facebook"></i></a>
+                    <a href="#" class="social-link"><i class="bi bi-instagram"></i></a>
+                    <a href="#" class="social-link"><i class="bi bi-twitter"></i></a>
                 </div>
             </div>
         </div>
-    </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-<!-- PWA Install Prompt -->
-    <div id="installPrompt" class="install-prompt" style="display: none;">
-        <div class="install-prompt-content">
-            <div class="d-flex align-items-center gap-3">
-                <i class="bi bi-download" style="font-size: 2rem; color: #667eea;"></i>
-                <div class="flex-grow-1">
-                    <h6 class="mb-1">Встановити Travel Planner</h6>
-                    <p class="mb-0 small text-muted">Додайте на головний екран для швидкого доступу</p>
-                </div>
-                <div class="d-flex gap-2">
-                    <button id="installBtn" class="btn btn-primary btn-sm">Встановити</button>
-                    <button id="dismissBtn" class="btn btn-outline-secondary btn-sm">Пізніше</button>
-                </div>
+        <hr class="footer-divider">
+
+        <div class="row align-items-center">
+            <div class="col-md-6 text-center text-md-start">
+                <p class="mb-0">&copy; 2026 TravelPlanner. Всі права захищені.</p>
+            </div>
+            <div class="col-md-6 text-center text-md-end">
+                <p class="mb-0">Зроблено з <i class="bi bi-heart-fill text-danger"></i> для мандрівників</p>
             </div>
         </div>
     </div>
+</footer>
 
-    <!-- Service Worker Registration -->
-    <script>
-        // Реєстрація Service Worker
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js', { scope: '/' })
-                    .then(registration => {
-                        console.log('Service Worker зареєстровано:', registration);
-                    })
-                    .catch(error => {
-                        console.log('Помилка реєстрації Service Worker:', error);
-                    });
-            });
-        }
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
 
-        // PWA Install Prompt
-        let deferredPrompt;
-        const installPrompt = document.getElementById('installPrompt');
-        const installBtn = document.getElementById('installBtn');
-        const dismissBtn = document.getElementById('dismissBtn');
-
-        window.addEventListener('beforeinstallprompt', (e) => {
-            // Запобігаємо автоматичному показу
-            e.preventDefault();
-            deferredPrompt = e;
-
-            // Показуємо власний промпт
-            installPrompt.style.display = 'block';
-
-            // Анімація появи
-            setTimeout(() => {
-                installPrompt.classList.add('show');
-            }, 100);
-        });
-
-        installBtn.addEventListener('click', async () => {
-            if (!deferredPrompt) return;
-
-            // Показуємо промпт
-            deferredPrompt.prompt();
-
-            // Чекаємо відповіді користувача
-            const { outcome } = await deferredPrompt.userChoice;
-            console.log(`Користувач ${outcome === 'accepted' ? 'прийняв' : 'відхилив'} встановлення`);
-
-            // Очищаємо промпт
-            deferredPrompt = null;
-            installPrompt.classList.remove('show');
-            setTimeout(() => {
-                installPrompt.style.display = 'none';
-            }, 300);
-        });
-
-        dismissBtn.addEventListener('click', () => {
-            installPrompt.classList.remove('show');
-            setTimeout(() => {
-                installPrompt.style.display = 'none';
-            }, 300);
-        });
-
-        // Перевірка чи додаток вже встановлено
-        window.addEventListener('appinstalled', () => {
-            console.log('Travel Planner встановлено!');
-            installPrompt.style.display = 'none';
-        });
-    </script>
-
-    <!-- Existing scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>
