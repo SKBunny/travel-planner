@@ -21,8 +21,8 @@
 
 <!-- Статистика місяця -->
 <div class="row mb-4">
-    <div class="col-md-4">
-        <div class="card stat-card bg-gradient text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm h-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
             <div class="card-body text-center">
                 <i class="bi bi-calendar-event stat-icon"></i>
                 <h3 class="mb-1">{{ month_trips|length }}</h3>
@@ -31,8 +31,8 @@
         </div>
     </div>
     
-    <div class="col-md-4">
-        <div class="card stat-card bg-gradient text-white" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm h-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
             <div class="card-body text-center">
                 <i class="bi bi-suitcase-lg stat-icon"></i>
                 <h3 class="mb-1">{{ all_trips|length }}</h3>
@@ -41,8 +41,8 @@
         </div>
     </div>
     
-    <div class="col-md-4">
-        <div class="card stat-card bg-gradient text-white" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm h-100" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
             <div class="card-body text-center">
                 <i class="bi bi-star-fill stat-icon"></i>
                 <h3 class="mb-1">{{ month_name }} {{ year }}</h3>
@@ -152,33 +152,6 @@
     </div>
 </div>
 {% endif %}
-
-<!-- Легенда -->
-<div class="card shadow-sm mt-4">
-    <div class="card-body">
-        <h6 class="mb-3"><i class="bi bi-info-circle"></i> Легенда</h6>
-        <div class="row">
-            <div class="col-md-4 mb-2">
-                <span class="legend-item">
-                    <span class="legend-color today-color"></span>
-                    Сьогодні
-                </span>
-            </div>
-            <div class="col-md-4 mb-2">
-                <span class="legend-item">
-                    <span class="legend-color trip-color"></span>
-                    День з поїздкою
-                </span>
-            </div>
-            <div class="col-md-4 mb-2">
-                <span class="legend-item">
-                    <i class="bi bi-airplane-fill text-primary"></i>
-                    Активна поїздка
-                </span>
-            </div>
-        </div>
-    </div>
-</div>
 
 <script>
     // Ініціалізація tooltips

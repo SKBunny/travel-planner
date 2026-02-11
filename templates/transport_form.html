@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}{% if transport %}Редагувати{% else %}Додати{% endif %} транспорт - {{ trip.title }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <h1 class="mb-2">
+            <i class="bi bi-airplane"></i>
+            {% if transport %}Редагувати транспорт{% else %}Додати транспорт{% endif %}
+        </h1>
+        <p class="text-muted mb-0">{{ trip.title }} • {{ trip.destination }}</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form method="POST">
+                    <!-- Тип транспорту -->
+                    <div class="mb-4">
+                        <label class="form-label">Тип транспорту *</label>
+                        <div class="row g-2">
+                            <div class="col-6 col-md-4">
+                                <input type="radio" class="btn-check" name="type" id="type_plane" value="plane"
+                                       {% if not transport or transport.type == 'plane' %}checked{% endif %} required>
+                                <label class="btn btn-outline-primary w-100" for="type_plane">
+                                    <i class="bi bi-airplane-fill d-block fs-3 mb-2"></i>
+                                    Літак
+                                </label>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <input type="radio" class="btn-check" name="type" id="type_train" value="train"
+                                       {% if transport and transport.type == 'train' %}checked{% endif %}>
+                                <label class="btn btn-outline-success w-100" for="type_train">
+                                    <i class="bi bi-train-front-fill d-block fs-3 mb-2"></i>
+                                    Поїзд
+                                </label>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <input type="radio" class="btn-check" name="type" id="type_bus" value="bus"
+                                       {% if transport and transport.type == 'bus' %}checked{% endif %}>
+                                <label class="btn btn-outline-warning w-100" for="type_bus">
+                                    <i class="bi bi-bus-front-fill d-block fs-3 mb-2"></i>
+                                    Автобус
+                                </label>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <input type="radio" class="btn-check" name="type" id="type_car" value="car"
+                                       {% if transport and transport.type == 'car' %}checked{% endif %}>
+                                <label class="btn btn-outline-info w-100" for="type_car">
+                                    <i class="bi bi-car-front-fill d-block fs-3 mb-2"></i>
+                                    Авто
+                                </label>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <input type="radio" class="btn-check" name="type" id="type_ferry" value="ferry"
+                                       {% if transport and transport.type == 'ferry' %}checked{% endif %}>
+                                <label class="btn btn-outline-secondary w-100" for="type_ferry">
+                                    <i class="bi bi-water d-block fs-3 mb-2"></i>
+                                    Паром
+                                </label>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <input type="radio" class="btn-check" name="type" id="type_other" value="other"
+                                       {% if transport and transport.type == 'other' %}checked{% endif %}>
+                                <label class="btn btn-outline-dark w-100" for="type_other">
+                                    <i class="bi bi-three-dots d-block fs-3 mb-2"></i>
+                                    Інше
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Маршрут -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="from_location" class="form-label">Звідки *</label>
+                            <input type="text" class="form-control" name="from_location" id="from_location"
+                                   value="{{ transport.from_location if transport else '' }}"
+                                   placeholder="Київ, Україна" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="to_location" class="form-label">Куди *</label>
+                            <input type="text" class="form-control" name="to_location" id="to_location"
+                                   value="{{ transport.to_location if transport else '' }}"
+                                   placeholder="Париж, Франція" required>
+                        </div>
+                    </div>
+
+                    <!-- Час -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="departure_date" class="form-label">Відправлення *</label>
+                            <input type="datetime-local" class="form-control" name="departure_date" id="departure_date"
+                                   value="{{ transport.departure_date.strftime('%Y-%m-%dT%H:%M') if transport else '' }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="arrival_date" class="form-label">Прибуття</label>
+                            <input type="datetime-local" class="form-control" name="arrival_date" id="arrival_date"
+                                   value="{{ transport.arrival_date.strftime('%Y-%m-%dT%H:%M') if transport and transport.arrival_date else '' }}">
+                        </div>
+                    </div>
+
+                    <!-- Деталі -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="carrier" class="form-label">Перевізник</label>
+                            <input type="text" class="form-control" name="carrier" id="carrier"
+                                   value="{{ transport.carrier if transport else '' }}"
+                                   placeholder="Wizz Air, FlixBus, Укрзалізниця">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="cost" class="form-label">Вартість (грн)</label>
+                            <input type="number" step="0.01" class="form-control" name="cost" id="cost"
+                                   value="{{ transport.cost if transport else '0' }}">
+                        </div>
+                    </div>
+
+                    <!-- Квиток -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="ticket_number" class="form-label">Номер квитка</label>
+                            <input type="text" class="form-control" name="ticket_number" id="ticket_number"
+                                   value="{{ transport.ticket_number if transport else '' }}"
+                                   placeholder="ABC123456">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="seat_number" class="form-label">Місце</label>
+                            <input type="text" class="form-control" name="seat_number" id="seat_number"
+                                   value="{{ transport.seat_number if transport else '' }}"
+                                   placeholder="12A">
+                        </div>
+                    </div>
+
+                    <!-- Код бронювання -->
+                    <div class="mb-3">
+                        <label for="booking_reference" class="form-label">Код бронювання</label>
+                        <input type="text" class="form-control" name="booking_reference" id="booking_reference"
+                               value="{{ transport.booking_reference if transport else '' }}"
+                               placeholder="ABC123">
+                    </div>
+
+                    <!-- Примітки -->
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Примітки</label>
+                        <textarea class="form-control" name="notes" id="notes" rows="3"
+                                  placeholder="Додаткова інформація про переліт/переїзд">{{ transport.notes if transport else '' }}</textarea>
+                    </div>
+
+                    <!-- Кнопки -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('transport_list', trip_id=trip.id) }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Скасувати
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle"></i>
+                            {% if transport %}Зберегти зміни{% else %}Додати транспорт{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Підказки -->
+        <div class="card shadow-sm mt-4">
+            <div class="card-body">
+                <h6 class="mb-3"><i class="bi bi-lightbulb"></i> Корисні поради:</h6>
+                <ul class="mb-0">
+                    <li>Додайте всі переміщення по порядку для повного маршруту</li>
+                    <li>Збережіть коди бронювання для швидкого доступу</li>
+                    <li>Вказуйте час в місцевому часовому поясі</li>
+                    <li>Додайте вартість для контролю бюджету</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.btn-check:checked + .btn-outline-primary {
+    background: #667eea;
+    color: white;
+}
+
+.btn-check:checked + .btn-outline-success {
+    background: #48bb78;
+    color: white;
+}
+
+.btn-check:checked + .btn-outline-warning {
+    background: #ed8936;
+    color: white;
+}
+
+.btn-check:checked + .btn-outline-info {
+    background: #4299e1;
+    color: white;
+}
+
+.btn-check:checked + .btn-outline-secondary {
+    background: #718096;
+    color: white;
+}
+
+.btn-check:checked + .btn-outline-dark {
+    background: #2d3748;
+    color: white;
+}
+</style>
+
+{% endblock %}

@@ -10,10 +10,8 @@ if (savedTheme === 'dark') {
 if (themeToggle) {
     themeToggle.addEventListener('click', function() {
         document.body.classList.toggle('dark-mode');
-
         const isDark = document.body.classList.contains('dark-mode');
         localStorage.setItem('theme', isDark ? 'dark' : 'light');
-
         const icon = this.querySelector('i');
         if (icon) {
             icon.className = isDark ? 'bi bi-sun-fill' : 'bi bi-moon-fill';
@@ -80,11 +78,19 @@ if (searchInput && quickResults) {
         return text.replace(regex, '<mark>$1</mark>');
     }
 
-    document.addEventListener('click', function(e) {
-        if (searchInput && !searchInput.contains(e.target) && quickResults && !quickResults.contains(e.target)) {
-            quickResults.style.display = 'none';
-        }
-    });
+   /*
+document.addEventListener('click', function(e) {
+    // Ігноруємо кліки на карті та модалах
+    if (e.target.closest('#worldMap') ||
+        e.target.closest('.modal') ||
+        e.target.closest('.leaflet-container')) {
+        return;
+    }
+    if (searchInput && !searchInput.contains(e.target) && quickResults && !quickResults.contains(e.target)) {
+        quickResults.style.display = 'none';
+    }
+});
+*/
 
     searchInput.addEventListener('focus', function() {
         if (quickResults && quickResults.innerHTML && this.value.length >= 2) {
@@ -116,3 +122,61 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 console.log('Travel Planner JS loaded!');
+
+// ==================== DRAG & DROP ДЛЯ АКТИВНОСТЕЙ ====================
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Перевіряємо чи є SortableJS
+    if (typeof Sortable === 'undefined') {
+        console.log('SortableJS not loaded');
+        return;
+    }
+
+    var timelines = document.querySelectorAll('.timeline');
+
+    timelines.forEach(function(timeline) {
+        if (timeline.children.length > 1) {
+            Sortable.create(timeline, {
+                animation: 150,
+                handle: '.activity-drag-handle',
+                ghostClass: 'activity-ghost',
+                dragClass: 'activity-dragging',
+
+                onEnd: function(evt) {
+                    var items = Array.from(timeline.children);
+                    var activityIds = items.map(function(item) {
+                        return item.dataset.activityId;
+                    }).filter(Boolean);
+
+                    if (activityIds.length > 0) {
+                        var tripId = timeline.dataset.tripId;
+                        var dayDate = timeline.dataset.dayDate;
+
+                        fetch('/api/reorder-activities', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                trip_id: tripId,
+                                day_date: dayDate,
+                                activity_ids: activityIds
+                            })
+                        })
+                        .then(function(response) { return response.json(); })
+                        .then(function(data) {
+                            if (data.success) {
+                                console.log('Порядок оновлено!');
+                            }
+                        })
+                        .catch(function(error) {
+                            console.error('Помилка:', error);
+                        });
+                    }
+                }
+            });
+        }
+    });
+});
+
+console.log('Drag & Drop initialized');

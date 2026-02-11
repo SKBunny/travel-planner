@@ -205,5 +205,54 @@ document.getElementById('check_in').addEventListener('change', function() {
     document.getElementById('check_out').min = this.value;
 });
 </script>
+<!-- Популярні сервіси бронювання -->
+<div class="card shadow-sm mt-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0"><i class="bi bi-star"></i> Популярні сервіси бронювання</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <a href="https://www.booking.com" target="_blank" class="booking-service-card text-decoration-none">
+                    <div class="card h-100 text-center p-3 booking-card">
+                        <i class="bi bi-house-door" style="font-size: 2.5rem; color: #003580;"></i>
+                        <h6 class="mt-2">Booking.com</h6>
+                        <p class="small text-muted mb-0">Готелі по всьому світу</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-4">
+                <a href="https://www.airbnb.com" target="_blank" class="booking-service-card text-decoration-none">
+                    <div class="card h-100 text-center p-3 booking-card">
+                        <i class="bi bi-house-heart" style="font-size: 2.5rem; color: #FF5A5F;"></i>
+                        <h6 class="mt-2">Airbnb</h6>
+                        <p class="small text-muted mb-0">Квартири та будинки</p>
+                    </div>
+                </a>
+            </div>
+            <div class="col-md-4">
+                <a href="https://www.hotels.com" target="_blank" class="booking-service-card text-decoration-none">
+                    <div class="card h-100 text-center p-3 booking-card">
+                        <i class="bi bi-building" style="font-size: 2.5rem; color: #d32f2f;"></i>
+                        <h6 class="mt-2">Hotels.com</h6>
+                        <p class="small text-muted mb-0">Знижки на готелі</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
 
+<style>
+.booking-card {
+    transition: transform 0.3s, box-shadow 0.3s;
+    border: 2px solid #e2e8f0;
+}
+
+.booking-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    border-color: #667eea;
+}
+</style>
 {% endblock %}

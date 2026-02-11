@@ -1405,81 +1405,102 @@ body.dark-mode .install-prompt-content {
 }
 /* ==================== ШВИДКИЙ ПОШУК ==================== */
 
-.quick-search-results {
-    position: absolute;
-    top: calc(100% + 5px);
-    left: 0;
-    right: 0;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    max-height: 400px;
-    overflow-y: auto;
-    z-index: 9999;
-    border: 1px solid #e2e8f0;
+/* Пошук */
+.quick-search-item {
+    display: block;
+    padding: 12px 16px;
+    color: #333;
+    text-decoration: none;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.2s;
 }
 
-.quick-search-item {
-    display: flex;
-    align-items: center;
-    padding: 10px 12px;
-    text-decoration: none;
-    color: #2d3748;
-    border-bottom: 1px solid #f0f0f0;
-    transition: background 0.2s;
+.quick-search-item:hover {
+    background-color: #f8f9fa;
 }
 
 .quick-search-item:last-child {
     border-bottom: none;
 }
 
-.quick-search-item:hover {
-    background: #f7fafc;
-}
-
-.quick-search-item.view-all {
-    justify-content: center;
-    color: #667eea;
-    font-weight: 600;
-    background: #f7fafc;
-}
-
-.quick-search-item.view-all:hover {
-    background: #edf2f7;
-}
-
 .result-icon {
-    font-size: 1.3rem;
-    margin-right: 10px;
-    flex-shrink: 0;
+    display: inline-block;
+    width: 24px;
+    text-align: center;
+    margin-right: 8px;
+    font-size: 16px;
 }
 
 .result-content {
-    flex-grow: 1;
-    min-width: 0;
+    display: inline-block;
 }
 
 .result-title {
-    font-weight: 600;
-    font-size: 0.9rem;
-    margin-bottom: 2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-weight: 500;
+    color: #333;
 }
 
-.result-title mark {
-    background: #fef08a;
+.result-subtitle {
+    font-size: 12px;
+    color: #666;
+    margin-top: 2px;
+}
+
+.view-all {
+    background-color: #f8f9fa;
+    text-align: center;
+    font-weight: 500;
+    color: #667eea;
+}
+
+.view-all:hover {
+    background-color: #e9ecef;
+    color: #5a67d8;
+}
+
+#quickResults mark {
+    background-color: #fef3c7;
     padding: 0 2px;
     border-radius: 2px;
 }
 
-.result-subtitle {
-    font-size: 0.75rem;
-    color: #718096;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+/* Темна тема */
+body.dark-mode {
+    background-color: #1a202c;
+    color: #e2e8f0;
+}
+
+body.dark-mode .navbar {
+    background-color: #2d3748 !important;
+    border-bottom: 1px solid #4a5568;
+}
+
+body.dark-mode .navbar-brand,
+body.dark-mode .nav-link {
+    color: #e2e8f0 !important;
+}
+
+body.dark-mode .card {
+    background-color: #2d3748;
+    color: #e2e8f0;
+    border-color: #4a5568;
+}
+
+body.dark-mode .form-control,
+body.dark-mode .form-select {
+    background-color: #1a202c;
+    color: #e2e8f0;
+    border-color: #4a5568;
+}
+
+body.dark-mode .btn-outline-secondary {
+    color: #e2e8f0;
+    border-color: #4a5568;
+}
+
+body.dark-mode .btn-outline-secondary:hover {
+    background-color: #4a5568;
+    color: #fff;
 }
 
 /* Dark mode */
@@ -1533,4 +1554,31 @@ body.dark-mode .result-subtitle {
 
 #globalSearch:focus::placeholder {
     color: #cbd5e0;
+}
+/* ==================== DRAG & DROP ==================== */
+
+.activity-drag-handle {
+    cursor: move;
+    color: #cbd5e0;
+    padding: 0 8px;
+    transition: color 0.2s;
+}
+
+.activity-drag-handle:hover {
+    color: #667eea;
+}
+
+.activity-ghost {
+    opacity: 0.4;
+    background: #edf2f7;
+}
+
+.activity-dragging {
+    opacity: 0.8;
+    transform: rotate(2deg);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.sortable-chosen {
+    cursor: grabbing;
 }

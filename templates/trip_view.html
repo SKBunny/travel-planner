@@ -3,35 +3,41 @@
 {% block title %}{{ trip.title }} - Travel Planner{% endblock %}
 
 {% block content %}
-<div class="mb-5 d-flex justify-content-between align-items-center flex-wrap" style="gap: 1.5rem;">
-    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
-        ← Назад до поїздок
-    </a>
-    <div class="d-flex flex-wrap" style="gap: 0.8rem;">
-        <a href="{{ url_for('accommodations_list', trip_id=trip.id) }}" class="btn" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
-            <i class="bi bi-building"></i> Готелі
+ <div class="mb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> ← Назад до поїздок
         </a>
-        <a href="{{ url_for('packing_list', trip_id=trip.id) }}" class="btn btn-success">
-            <i class="bi bi-suitcase-lg"></i> Список речей
-        </a>
-        <a href="{{ url_for('trip_statistics', trip_id=trip.id) }}" class="btn btn-info">
-            <i class="bi bi-graph-up"></i> Статистика
-        </a>
-        <a href="{{ url_for('edit_trip', trip_id=trip.id) }}" class="btn btn-warning">
-            <i class="bi bi-pencil"></i> Редагувати
-        </a>
-        <a href="{{ url_for('save_as_template', trip_id=trip.id) }}" class="btn btn-outline-primary">
-            <i class="bi bi-save"></i> Зберегти як шаблон
-        </a>
-        <a href="{{ url_for('trip_notes', trip_id=trip.id) }}" class="btn btn-info">
-            <i class="bi bi-journal-text"></i> Нотатки та чекліст
-        </a>
-        <a href="{{ url_for('export_trip_pdf', trip_id=trip.id) }}" class="btn btn-outline-danger" target="_blank">
-            <i class="bi bi-file-pdf"></i> Експорт в PDF
-        </a>
-        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
-            <i class="bi bi-trash"></i> Видалити
-        </button>
+
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ url_for('accommodations_list', trip_id=trip.id) }}" class="btn btn-primary">
+                <i class="bi bi-building"></i> Готелі
+            </a>
+            <a href="{{ url_for('transport_list', trip_id=trip.id) }}" class="btn btn-primary">
+                <i class="bi bi-signpost-2"></i> Маршрути
+            </a>
+            <a href="{{ url_for('packing_list', trip_id=trip.id) }}" class="btn btn-primary">
+                <i class="bi bi-suitcase-lg"></i> Список речей
+            </a>
+            <a href="{{ url_for('trip_statistics', trip_id=trip.id) }}" class="btn btn-primary">
+                <i class="bi bi-graph-up"></i> Статистика
+            </a>
+            <a href="{{ url_for('trip_notes', trip_id=trip.id) }}" class="btn btn-primary">
+                <i class="bi bi-journal-text"></i> Нотатки
+            </a>
+            <a href="{{ url_for('save_as_template', trip_id=trip.id) }}" class="btn btn-primary">
+                <i class="bi bi-save"></i> Шаблон
+            </a>
+            <a href="{{ url_for('export_trip_pdf', trip_id=trip.id) }}" class="btn btn-primary" target="_blank">
+                <i class="bi bi-file-pdf"></i> PDF
+            </a>
+            <a href="{{ url_for('edit_trip', trip_id=trip.id) }}" class="btn btn-warning">
+                <i class="bi bi-pencil"></i> Редагувати
+            </a>
+            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                <i class="bi bi-trash"></i> Видалити
+            </button>
+        </div>
     </div>
 </div>
 
@@ -139,7 +145,293 @@
     </div>
 </div>
 {% endif %}
+<!-- Міста поїздки -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-geo-alt"></i> Міста поїздки</h5>
+        <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addDestinationModal">
+            <i class="bi bi-plus-circle"></i> Додати місто
+        </button>
+    </div>
+    <div class="card-body">
+        {% if trip.destinations %}
+        <div class="destinations-list" id="destinationsList">
+            {% for destination in trip.destinations|sort(attribute='order') %}
+            <div class="destination-item mb-3" data-destination-id="{{ destination.id }}">
+                <div class="d-flex align-items-start">
+                    <span class="destination-drag-handle me-2">
+                        <i class="bi bi-grip-vertical"></i>
+                    </span>
+                    <div class="destination-number me-3">
+                        {{ loop.index }}
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">
+                            <i class="bi bi-pin-map-fill text-danger"></i>
+                            {{ destination.city }}, {{ destination.country }}
+                        </h6>
+                        {% if destination.arrival_date and destination.departure_date %}
+                        <small class="text-muted">
+                            <i class="bi bi-calendar-range"></i>
+                            {{ destination.arrival_date.strftime('%d.%m.%Y') }} - {{ destination.departure_date.strftime('%d.%m.%Y') }}
+                            <span class="badge bg-secondary ms-2">
+                                {{ (destination.departure_date - destination.arrival_date).days + 1 }} днів
+                            </span>
+                        </small>
+                        {% endif %}
+                        {% if destination.notes %}
+                        <p class="text-muted small mb-0 mt-1">{{ destination.notes }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <button class="btn btn-sm btn-outline-primary"
+                                onclick="editDestination({{ destination.id }}, '{{ destination.city }}', '{{ destination.country }}', '{{ destination.arrival_date.strftime('%Y-%m-%d') if destination.arrival_date else '' }}', '{{ destination.departure_date.strftime('%Y-%m-%d') if destination.departure_date else '' }}', '{{ destination.notes }}')">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger"
+                                onclick="deleteDestination({{ destination.id }})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-4" id="emptyState">
+            <i class="bi bi-map" style="font-size: 3rem; color: #cbd5e0;"></i>
+            <p class="text-muted mt-2 mb-0">Додайте міста які плануєте відвідати</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
 
+<!-- Modal: Додати місто -->
+<div class="modal fade" id="addDestinationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Додати місто</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addDestinationForm">
+                    <div class="mb-3">
+                        <label for="city" class="form-label">Місто *</label>
+                        <input type="text" class="form-control" id="city" name="city" required placeholder="Париж">
+                    </div>
+                    <div class="mb-3">
+                        <label for="country" class="form-label">Країна *</label>
+                        <input type="text" class="form-control" id="country" name="country" required placeholder="Франція">
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label for="arrival_date" class="form-label">Прибуття</label>
+                            <input type="date" class="form-control" id="arrival_date" name="arrival_date">
+                        </div>
+                        <div class="col-6">
+                            <label for="departure_date" class="form-label">Виїзд</label>
+                            <input type="date" class="form-control" id="departure_date" name="departure_date">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Примітки</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                <button type="button" class="btn btn-primary" onclick="saveDestination()">Додати</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Редагувати місто -->
+<div class="modal fade" id="editDestinationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Редагувати місто</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editDestinationForm">
+                    <input type="hidden" id="edit_destination_id">
+                    <div class="mb-3">
+                        <label for="edit_city" class="form-label">Місто *</label>
+                        <input type="text" class="form-control" id="edit_city" name="city" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_country" class="form-label">Країна *</label>
+                        <input type="text" class="form-control" id="edit_country" name="country" required>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label for="edit_arrival_date" class="form-label">Прибуття</label>
+                            <input type="date" class="form-control" id="edit_arrival_date" name="arrival_date">
+                        </div>
+                        <div class="col-6">
+                            <label for="edit_departure_date" class="form-label">Виїзд</label>
+                            <input type="date" class="form-control" id="edit_departure_date" name="departure_date">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_notes" class="form-label">Примітки</label>
+                        <textarea class="form-control" id="edit_notes" name="notes" rows="2"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                <button type="button" class="btn btn-primary" onclick="updateDestination()">Зберегти</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.destination-item {
+    padding: 15px;
+    background: #f7fafc;
+    border-left: 4px solid #4299e1;
+    border-radius: 8px;
+    transition: all 0.3s;
+}
+
+.destination-item:hover {
+    background: #edf2f7;
+    transform: translateX(3px);
+}
+
+.destination-number {
+    width: 35px;
+    height: 35px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.destination-drag-handle {
+    cursor: move;
+    color: #cbd5e0;
+    padding: 5px;
+}
+
+.destination-drag-handle:hover {
+    color: #667eea;
+}
+</style>
+
+<script>
+// Додати місто
+function saveDestination() {
+    const form = document.getElementById('addDestinationForm');
+    const formData = new FormData(form);
+
+    const data = {
+        city: formData.get('city'),
+        country: formData.get('country'),
+        arrival_date: formData.get('arrival_date'),
+        departure_date: formData.get('departure_date'),
+        notes: formData.get('notes')
+    };
+
+    fetch('/trip/{{ trip.id }}/destination/add', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            location.reload();
+        }
+    });
+}
+
+// Редагувати місто
+function editDestination(id, city, country, arrival, departure, notes) {
+    document.getElementById('edit_destination_id').value = id;
+    document.getElementById('edit_city').value = city;
+    document.getElementById('edit_country').value = country;
+    document.getElementById('edit_arrival_date').value = arrival;
+    document.getElementById('edit_departure_date').value = departure;
+    document.getElementById('edit_notes').value = notes;
+
+    const modal = new bootstrap.Modal(document.getElementById('editDestinationModal'));
+    modal.show();
+}
+
+function updateDestination() {
+    const id = document.getElementById('edit_destination_id').value;
+    const form = document.getElementById('editDestinationForm');
+    const formData = new FormData(form);
+
+    const data = {
+        city: formData.get('city'),
+        country: formData.get('country'),
+        arrival_date: formData.get('arrival_date'),
+        departure_date: formData.get('departure_date'),
+        notes: formData.get('notes')
+    };
+
+    fetch(`/trip/{{ trip.id }}/destination/${id}/edit`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            location.reload();
+        }
+    });
+}
+
+// Видалити місто
+function deleteDestination(id) {
+    if (!confirm('Видалити це місто?')) return;
+
+    fetch(`/trip/{{ trip.id }}/destination/${id}/delete`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'}
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            location.reload();
+        }
+    });
+}
+
+// Drag & Drop для міст
+document.addEventListener('DOMContentLoaded', function() {
+    const list = document.getElementById('destinationsList');
+    if (list && typeof Sortable !== 'undefined') {
+        Sortable.create(list, {
+            animation: 150,
+            handle: '.destination-drag-handle',
+            onEnd: function(evt) {
+                const items = Array.from(list.children);
+                const ids = items.map(item => item.dataset.destinationId);
+
+                fetch('/trip/{{ trip.id }}/destinations/reorder', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({destination_ids: ids})
+                });
+            }
+        });
+    }
+});
+</script>
 <!-- План активностей -->
 <div class="card shadow-sm">
     <div class="card-header bg-light d-flex justify-content-between align-items-center">
@@ -160,14 +452,19 @@
                         <small class="text-muted">({{ ['Понеділок', 'Вівторок', 'Середа', 'Четвер', "П'ятниця", 'Субота', 'Неділя'][day_date.weekday()] }})</small>
                     </h5>
 
-                    <div class="timeline">
-                        {% for activity in activities|sort(attribute='time') %}
-                            <div class="activity-item mb-3 {% if activity.completed %}activity-completed{% endif %}">
+                   <div class="timeline" data-trip-id="{{ trip.id }}" data-day-date="{{ day_date.strftime('%Y-%m-%d') }}">
+                         {% for activity in activities|sort(attribute='time') %}
+                            <div class="activity-item mb-3 {% if activity.completed %}activity-completed{% endif %}" data-activity-id="{{ activity.id }}">
                                 <div class="card">
                                     <div class="card-body">
                                         <div class="d-flex justify-content-between align-items-start">
                                             <div class="flex-grow-1">
                                                 <div class="d-flex align-items-center mb-2">
+                                                    <!-- Drag handle -->
+                                                    <span class="activity-drag-handle">
+                                                        <i class="bi bi-grip-vertical"></i>
+                                                    </span>
+
                                                     <form method="POST" action="{{ url_for('toggle_activity', trip_id=trip.id, activity_id=activity.id) }}" style="display: inline;">
                                                         <button type="submit" class="btn btn-sm btn-outline-success me-2" style="border: 2px solid;">
                                                             {% if activity.completed %}✓{% else %} {% endif %}

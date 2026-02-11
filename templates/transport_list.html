@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}Маршрути - {{ trip.title }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1 class="mb-2">
+            <i class="bi bi-airplane"></i> Маршрути та транспорт
+        </h1>
+        <p class="text-muted mb-0">{{ trip.title }} • {{ trip.destination }}</p>
+    </div>
+    <div class="col-md-4 text-md-end">
+        <a href="{{ url_for('view_trip', trip_id=trip.id) }}" class="btn btn-outline-secondary me-2">
+            <i class="bi bi-arrow-left"></i> Назад
+        </a>
+        <a href="{{ url_for('new_transport', trip_id=trip.id) }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Додати транспорт
+        </a>
+    </div>
+</div>
+
+{% if transports %}
+    <!-- Візуалізація маршруту -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h5 class="mb-4"><i class="bi bi-map"></i> Ваш маршрут</h5>
+            <div class="route-timeline">
+                {% for transport in transports %}
+                <div class="route-step">
+                    <div class="route-marker">
+                        {% if transport.type == 'plane' %}
+                            <i class="bi bi-airplane-fill text-primary"></i>
+                        {% elif transport.type == 'train' %}
+                            <i class="bi bi-train-front-fill text-success"></i>
+                        {% elif transport.type == 'bus' %}
+                            <i class="bi bi-bus-front-fill text-warning"></i>
+                        {% elif transport.type == 'car' %}
+                            <i class="bi bi-car-front-fill text-info"></i>
+                        {% else %}
+                            <i class="bi bi-dot text-secondary"></i>
+                        {% endif %}
+                    </div>
+                    <div class="route-content">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="mb-1">
+                                    {{ transport.from_location }} → {{ transport.to_location }}
+                                </h6>
+                                <p class="text-muted mb-1">
+                                    <i class="bi bi-calendar"></i> 
+                                    {{ transport.departure_date.strftime('%d.%m.%Y %H:%M') }}
+                                    {% if transport.arrival_date %}
+                                        → {{ transport.arrival_date.strftime('%d.%m.%Y %H:%M') }}
+                                    {% endif %}
+                                </p>
+                                {% if transport.carrier %}
+                                    <small class="text-muted">
+                                        <i class="bi bi-building"></i> {{ transport.carrier }}
+                                    </small>
+                                {% endif %}
+                                {% if transport.ticket_number %}
+                                    <small class="text-muted ms-2">
+                                        <i class="bi bi-ticket-perforated"></i> {{ transport.ticket_number }}
+                                    </small>
+                                {% endif %}
+                            </div>
+                            <div>
+                                {% if transport.cost > 0 %}
+                                    <span class="badge bg-success">{{ transport.cost }} грн</span>
+                                {% endif %}
+                                <a href="{{ url_for('edit_transport', trip_id=trip.id, transport_id=transport.id) }}" 
+                                   class="btn btn-sm btn-outline-warning ms-2">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#deleteModal{{ transport.id }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% if transport.notes %}
+                            <small class="text-muted">{{ transport.notes }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Modal видалення -->
+                <div class="modal fade" id="deleteModal{{ transport.id }}" tabindex="-1">
+                    <div class="modal-dialog modal-sm">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h6 class="modal-title">Видалити транспорт?</h6>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                                <form method="POST" action="{{ url_for('delete_transport', trip_id=trip.id, transport_id=transport.id) }}">
+                                    <button type="submit" class="btn btn-sm btn-danger">Видалити</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Загальна інформація -->
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm text-center">
+                <div class="card-body">
+                    <i class="bi bi-geo-alt" style="font-size: 2rem; color: #667eea;"></i>
+                    <h4 class="mt-2">{{ transports|length }}</h4>
+                    <p class="mb-0 text-muted">Переміщень</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm text-center">
+                <div class="card-body">
+                    <i class="bi bi-cash-stack" style="font-size: 2rem; color: #48bb78;"></i>
+                    <h4 class="mt-2">{{ transports|sum(attribute='cost') }} грн</h4>
+                    <p class="mb-0 text-muted">Вартість транспорту</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm text-center">
+                <div class="card-body">
+                    <i class="bi bi-clock-history" style="font-size: 2rem; color: #f6ad55;"></i>
+                    <h4 class="mt-2">
+                        {% set total_time = (transports[-1].arrival_date - transports[0].departure_date).total_seconds() / 3600 if transports[-1].arrival_date else 0 %}
+                        {{ "%.1f"|format(total_time) }} год
+                    </h4>
+                    <p class="mb-0 text-muted">Час в дорозі</p>
+                </div>
+            </div>
+        </div>
+    </div>
+{% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-airplane" style="font-size: 4rem; color: #cbd5e0;"></i>
+        <h4 class="mt-3 mb-2">Немає маршрутів</h4>
+        <p class="text-muted mb-4">Додайте інформацію про ваш транспорт</p>
+        <a href="{{ url_for('new_transport', trip_id=trip.id) }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Додати перший маршрут
+        </a>
+    </div>
+{% endif %}
+
+<style>
+.route-timeline {
+    position: relative;
+    padding-left: 40px;
+}
+
+.route-timeline::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, #667eea, #764ba2);
+}
+
+.route-step {
+    position: relative;
+    margin-bottom: 30px;
+}
+
+.route-marker {
+    position: absolute;
+    left: -33px;
+    top: 5px;
+    width: 30px;
+    height: 30px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.route-content {
+    background: #f7fafc;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 3px solid #667eea;
+}
+</style>
+
+{% endblock %}

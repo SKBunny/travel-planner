@@ -44,7 +44,7 @@
                                         <button class="btn btn-sm btn-link text-primary" onclick="editNote({{ note.id }}, '{{ note.title }}', '{{ note.content }}', '{{ note.category }}', {{ note.is_pinned|lower }})">
                                             <i class="bi bi-pencil"></i>
                                         </button>
-                                        <form method="POST" action="{{ url_for('delete_note', trip_id=trip.id, note_id=note.id) }}" 
+                                        <form method="POST" action="{{ url_for('delete_note', trip_id=trip.id, note_id=note.id) }}"
                                               class="d-inline" onsubmit="return confirm('Видалити цю нотатку?')">
                                             <button type="submit" class="btn btn-sm btn-link text-danger">
                                                 <i class="bi bi-trash"></i>
@@ -54,7 +54,7 @@
                                 </div>
                                 <p class="text-muted mb-1">{{ note.content }}</p>
                                 <small class="text-muted">
-                                    <i class="bi bi-clock"></i> 
+                                    <i class="bi bi-clock"></i>
                                     {{ note.updated_at.strftime('%d.%m.%Y %H:%M') }}
                                 </small>
                             </div>
@@ -81,7 +81,7 @@
                     <span class="badge bg-success">{{ completed_items }}/{{ total_items }}</span>
                 </div>
                 <div class="progress" style="height: 25px;">
-                    <div class="progress-bar bg-success" role="progressbar" 
+                    <div class="progress-bar bg-success" role="progressbar"
                          style="width: {{ completion_percentage }}%">
                         {{ "%.0f"|format(completion_percentage) }}%
                     </div>
@@ -104,11 +104,12 @@
                         {% for item in items %}
                             <div class="checklist-item {% if item.is_completed %}completed{% endif %} mb-2">
                                 <div class="d-flex align-items-start">
-                                    <button class="btn btn-sm btn-link p-0 me-2" 
-                                            onclick="toggleChecklistItem({{ item.id }}, this)">
-                                        <i class="bi {% if item.is_completed %}bi-check-circle-fill text-success{% else %}bi-circle{% endif %}" 
-                                           style="font-size: 1.5rem;"></i>
-                                    </button>
+                                    <form method="POST" action="{{ url_for('toggle_checklist_item', trip_id=trip.id, item_id=item.id) }}" class="me-2">
+                                        <button type="submit" class="btn btn-sm btn-link p-0">
+                                            <i class="bi {% if item.is_completed %}bi-check-circle-fill text-success{% else %}bi-circle{% endif %}"
+                                               style="font-size: 1.5rem;"></i>
+                                        </button>
+                                    </form>
                                     <div class="flex-grow-1">
                                         <span class="{% if item.is_completed %}text-decoration-line-through text-muted{% endif %}">
                                             {{ item.item }}
@@ -116,7 +117,7 @@
                                         {% if item.due_date %}
                                             <br>
                                             <small class="text-muted">
-                                                <i class="bi bi-calendar"></i> 
+                                                <i class="bi bi-calendar"></i>
                                                 До {{ item.due_date.strftime('%d.%m.%Y') }}
                                             </small>
                                         {% endif %}
@@ -125,7 +126,7 @@
                                             <small class="text-muted">{{ item.notes }}</small>
                                         {% endif %}
                                     </div>
-                                    <form method="POST" action="{{ url_for('delete_checklist_item', trip_id=trip.id, item_id=item.id) }}" 
+                                    <form method="POST" action="{{ url_for('delete_checklist_item', trip_id=trip.id, item_id=item.id) }}"
                                           class="d-inline" onsubmit="return confirm('Видалити пункт?')">
                                         <button type="submit" class="btn btn-sm btn-link text-danger">
                                             <i class="bi bi-trash"></i>
@@ -321,24 +322,9 @@ function editNote(id, title, content, category, isPinned) {
     document.getElementById('edit_category').value = category;
     document.getElementById('edit_is_pinned').checked = isPinned;
     document.getElementById('editNoteForm').action = `/trip/{{ trip.id }}/notes/${id}/edit`;
-    
+
     const modal = new bootstrap.Modal(document.getElementById('editNoteModal'));
     modal.show();
-}
-
-function toggleChecklistItem(itemId, button) {
-    fetch(`/trip/{{ trip.id }}/checklist/${itemId}/toggle`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        }
-    });
 }
 </script>
 

@@ -615,6 +615,102 @@ def dashboard():
                            filter_status=filter_status)
 
 
+# ==================== КАРТА СВІТУ ====================
+
+@app.route('/world-map')
+@login_required
+def world_map():
+    from datetime import date
+
+    # Всі поїздки користувача
+    trips = Trip.query.filter_by(user_id=current_user.id).all()
+
+    # Отримуємо вручну відмічені країни з БД
+    manual_countries = VisitedCountry.query.filter_by(user_id=current_user.id).all()
+
+    # Спочатку створюємо словники для вручну відмічених
+    manual_visited = {}
+    manual_planned = {}
+
+    for country in manual_countries:
+        if country.status == 'visited':
+            manual_visited[country.country_name] = True
+        elif country.status == 'planned':
+            manual_planned[country.country_name] = True
+
+    visited = {}
+    planned = {}
+
+    today = date.today()
+
+    # Обробляємо поїздки
+    for trip in trips:
+        destination_parts = trip.destination.split(',')
+        country = destination_parts[-1].strip() if len(destination_parts) > 1 else trip.destination.strip()
+
+        trip_end = trip.end_date.date() if hasattr(trip.end_date, 'date') else trip.end_date
+
+        if trip_end < today:
+            # Відвідано через поїздку
+            if country not in visited:
+                visited[country] = []
+            visited[country].append({
+                'title': trip.title,
+                'date': trip.start_date.strftime('%d.%m.%Y')
+            })
+        else:
+            # Заплановано через поїздку
+            # НЕ додаємо якщо вручну вже відмічено як visited
+            if country not in manual_visited and country not in planned:
+                planned[country] = {
+                    'country': country,
+                    'date': trip.start_date.strftime('%d.%m.%Y')
+                }
+
+    # ТЕПЕР додаємо вручну відмічені країни
+    for country_name in manual_visited:
+        if country_name not in visited:
+            visited[country_name] = []
+        visited[country_name].insert(0, {
+            'title': 'Відмічено вручну',
+            'date': 'Без дати'
+        })
+
+    for country_name in manual_planned:
+        # НЕ додаємо якщо вже є у visited (з поїздок або вручну)
+        if country_name not in visited and country_name not in planned:
+            planned[country_name] = {
+                'country': country_name,
+                'date': 'Не вказано'
+            }
+
+    # Форматуємо для шаблону
+    visited_countries = [
+        {
+            'country': country,
+            'trips': trips_list
+        }
+        for country, trips_list in visited.items()
+    ]
+
+    planned_countries = list(planned.values())
+
+    # Статистика
+    total_countries = 195
+    coverage = (len(visited) / total_countries * 100) if visited else 0
+
+    # ВАЖЛИВО: передаємо назви країн для JavaScript
+    visited_country_names = list(visited.keys())
+    planned_country_names = list(planned.keys())
+
+    return render_template('world_map.html',
+                           visited_countries=visited_countries,
+                           planned_countries=planned_countries,
+                           total_trips=len(trips),
+                           coverage_percentage=round(coverage, 1),
+                           visited_country_names=visited_country_names,
+                           planned_country_names=planned_country_names)
+
 # Мої поїздки (окрема сторінка)
 @app.route('/my-trips')
 @login_required
@@ -732,6 +828,30 @@ def trip_calendar():
 
 
 # ==================== API ІНТЕГРАЦІЇ ====================
+
+# API для зміни порядку активностей
+@app.route('/api/reorder-activities', methods=['POST'])
+@login_required
+def reorder_activities():
+    data = request.get_json()
+    trip_id = data.get('trip_id')
+    activity_ids = data.get('activity_ids', [])
+
+    trip = Trip.query.get_or_404(trip_id)
+    if trip.user_id != current_user.id:
+        return {'success': False, 'error': 'Access denied'}, 403
+
+    # Оновлюємо порядок (можна зберегти в поле order якщо воно є)
+    for index, activity_id in enumerate(activity_ids):
+        activity = Activity.query.get(activity_id)
+        if activity and activity.trip_id == int(trip_id):
+            # Якщо є поле order - оновіть його
+            # activity.order = index
+            pass
+
+    db.session.commit()
+
+    return {'success': True}
 
 def get_weather(city, country_code=''):
     """Отримує погоду для міста"""
@@ -1435,7 +1555,6 @@ def export_trip_pdf(trip_id):
         flash('У вас немає доступу до цієї поїздки', 'danger')
         return redirect(url_for('dashboard'))
 
-    # Створюємо PDF в пам'яті
     buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -1446,10 +1565,9 @@ def export_trip_pdf(trip_id):
         bottomMargin=1.5 * cm
     )
 
-    # Контейнер для елементів
     elements = []
 
-    # Реєструємо шрифт з підтримкою кирилиці
+    # Шрифт
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
     import os
@@ -1468,59 +1586,38 @@ def export_trip_pdf(trip_id):
     # Стилі
     styles = getSampleStyleSheet()
 
-    # Заголовок документа
     title_style = ParagraphStyle(
         'CustomTitle',
         parent=styles['Heading1'],
-        fontSize=28,
+        fontSize=32,
         fontName=font_bold,
         textColor=colors.HexColor('#667eea'),
         spaceAfter=10,
         alignment=TA_CENTER,
-        leading=34
+        leading=38
     )
 
-    # Підзаголовок
     subtitle_style = ParagraphStyle(
         'Subtitle',
         parent=styles['Normal'],
-        fontSize=14,
+        fontSize=16,
         fontName=font_name,
         textColor=colors.HexColor('#718096'),
         spaceAfter=30,
         alignment=TA_CENTER
     )
 
-    # Заголовки секцій
     heading_style = ParagraphStyle(
         'CustomHeading',
         parent=styles['Heading2'],
-        fontSize=18,
+        fontSize=20,
         fontName=font_bold,
-        textColor=colors.HexColor('#667eea'),
+        textColor=colors.white,
         spaceAfter=15,
         spaceBefore=25,
-        borderWidth=2,
-        borderColor=colors.HexColor('#667eea'),
-        borderPadding=8,
-        backColor=colors.HexColor('#f7fafc'),
+        backColor=colors.HexColor('#667eea'),
+        borderPadding=10,
         borderRadius=5
-    )
-
-    # Підзаголовки днів
-    day_heading_style = ParagraphStyle(
-        'DayHeading',
-        parent=styles['Heading3'],
-        fontSize=14,
-        fontName=font_bold,
-        textColor=colors.HexColor('#2d3748'),
-        spaceAfter=10,
-        spaceBefore=15,
-        leftIndent=10,
-        borderWidth=1,
-        borderColor=colors.HexColor('#cbd5e0'),
-        borderPadding=6,
-        backColor=colors.HexColor('#edf2f7')
     )
 
     normal_style = ParagraphStyle(
@@ -1533,54 +1630,43 @@ def export_trip_pdf(trip_id):
 
     # ========== ОБКЛАДИНКА ==========
 
-    # Логотип/Іконка
     icon_style = ParagraphStyle(
         'Icon',
         parent=styles['Normal'],
-        fontSize=48,
+        fontSize=60,
         alignment=TA_CENTER,
         spaceAfter=20
     )
     elements.append(Paragraph("✈", icon_style))
-
-    # Заголовок
     elements.append(Paragraph(trip.title, title_style))
 
-    # Підзаголовок
     subtitle_text = f"{trip.destination}"
     elements.append(Paragraph(subtitle_text, subtitle_style))
 
-    # Декоративна лінія
     line = Table([['']], colWidths=[18 * cm])
     line.setStyle(TableStyle([
         ('LINEABOVE', (0, 0), (-1, 0), 3, colors.HexColor('#667eea')),
-        ('LINEBELOW', (0, 0), (-1, 0), 1, colors.HexColor('#a0aec0'))
     ]))
     elements.append(line)
     elements.append(Spacer(1, 0.5 * cm))
 
     # ========== ІНФОРМАЦІЙНА КАРТКА ==========
 
-    # Розрахунки
     trip_duration = (trip.end_date - trip.start_date).days + 1
 
     info_card_data = [
         [
-            Paragraph('<b>📅 ДАТИ ПОДОРОЖІ</b>', normal_style),
+            Paragraph('<b>ДАТИ</b>', normal_style),
             Paragraph(f'{trip.start_date.strftime("%d.%m.%Y")} - {trip.end_date.strftime("%d.%m.%Y")}', normal_style)
         ],
         [
-            Paragraph('<b>⏱ ТРИВАЛІСТЬ</b>', normal_style),
-            Paragraph(f'{trip_duration} {trip_duration if trip_duration > 1 else ""} днів', normal_style)
+            Paragraph('<b>ТРИВАЛІСТЬ</b>', normal_style),
+            Paragraph(f'{trip_duration} днів', normal_style)
         ],
         [
-            Paragraph('<b>💰 БЮДЖЕТ</b>', normal_style),
+            Paragraph('<b>БЮДЖЕТ</b>', normal_style),
             Paragraph(f'{trip.budget:.2f} {CURRENCY_SYMBOLS.get(trip.currency, trip.currency)}', normal_style)
         ],
-        [
-            Paragraph('<b>📍 НАПРЯМОК</b>', normal_style),
-            Paragraph(trip.destination, normal_style)
-        ]
     ]
 
     info_card = Table(info_card_data, colWidths=[5 * cm, 13 * cm])
@@ -1597,11 +1683,97 @@ def export_trip_pdf(trip_id):
         ('TOPPADDING', (0, 0), (-1, -1), 12),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
         ('GRID', (0, 0), (-1, -1), 1.5, colors.HexColor('#cbd5e0')),
-        ('ROWBACKGROUNDS', (1, 0), (1, -1), [colors.white, colors.HexColor('#f7fafc')])
     ]))
 
     elements.append(info_card)
     elements.append(Spacer(1, 1 * cm))
+
+    # ========== МІСТА ПОЇЗДКИ ==========
+
+    destinations = TripDestination.query.filter_by(trip_id=trip_id).order_by(TripDestination.order).all()
+
+    if destinations:
+        elements.append(Paragraph("МІСТА ПОЇЗДКИ", heading_style))
+        elements.append(Spacer(1, 0.3 * cm))
+
+        dest_data = []
+        for i, dest in enumerate(destinations, 1):
+            dest_data.append([
+                Paragraph(f'<b>{i}</b>', normal_style),
+                Paragraph(f'<b>{dest.city}</b>', normal_style),
+                Paragraph(dest.country, normal_style),
+                Paragraph(
+                    f'{dest.arrival_date.strftime("%d.%m") if dest.arrival_date else "—"} - {dest.departure_date.strftime("%d.%m") if dest.departure_date else "—"}',
+                    normal_style)
+            ])
+
+        dest_table = Table(dest_data, colWidths=[1.5 * cm, 7 * cm, 5 * cm, 4.5 * cm])
+        dest_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#667eea')),
+            ('TEXTCOLOR', (0, 0), (0, -1), colors.white),
+            ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, -1), font_name),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('LEFTPADDING', (0, 0), (-1, -1), 10),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#e2e8f0')),
+            ('ROWBACKGROUNDS', (1, 0), (-1, -1), [colors.white, colors.HexColor('#f7fafc')])
+        ]))
+
+        elements.append(dest_table)
+        elements.append(Spacer(1, 0.5 * cm))
+
+    # ========== ТРАНСПОРТ ==========
+
+    transports = Transport.query.filter_by(trip_id=trip_id).order_by(Transport.departure_date).all()
+
+    if transports:
+        elements.append(Paragraph(" ТРАНСПОРТ ТА МАРШРУТИ", heading_style))
+        elements.append(Spacer(1, 0.3 * cm))
+
+        transport_icons = {
+            'plane': '',
+            'train': '',
+            'bus': '',
+            'car': '',
+            'ferry': ''
+        }
+
+        for transport in transports:
+            icon = transport_icons.get(transport.type, '•')
+
+            transport_data = [[
+                Paragraph(f'<b>{icon} {transport.from_location} → {transport.to_location}</b>', normal_style),
+                Paragraph(f'{transport.cost:.0f} грн' if transport.cost > 0 else '—', normal_style)
+            ]]
+
+            transport_info = f'{transport.departure_date.strftime("%d.%m.%Y %H:%M")}'
+            if transport.arrival_date:
+                transport_info += f' → {transport.arrival_date.strftime("%d.%m.%Y %H:%M")}'
+            if transport.carrier:
+                transport_info += f' • {transport.carrier}'
+
+            transport_data.append([
+                Paragraph(f'<i>{transport_info}</i>', ParagraphStyle('Small', parent=normal_style, fontSize=9,
+                                                                     textColor=colors.HexColor('#718096'))),
+                ''
+            ])
+
+            transport_table = Table(transport_data, colWidths=[15 * cm, 3 * cm])
+            transport_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f7fafc')),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 10),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 10),
+                ('TOPPADDING', (0, 0), (-1, -1), 8),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+                ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#cbd5e0'))
+            ]))
+
+            elements.append(transport_table)
+            elements.append(Spacer(1, 0.3 * cm))
 
     # ========== МАРШРУТ ПОДОРОЖІ ==========
 
@@ -1613,7 +1785,8 @@ def export_trip_pdf(trip_id):
         activities_by_day[activity_date].append(activity)
 
     if activities_by_day:
-        elements.append(Paragraph("📅 МАРШРУТ ПОДОРОЖІ", heading_style))
+        elements.append(PageBreak())
+        elements.append(Paragraph(" ПЛАН ПОДОРОЖІ", heading_style))
         elements.append(Spacer(1, 0.3 * cm))
 
         trip_start = trip.start_date.date() if hasattr(trip.start_date, 'date') else trip.start_date
@@ -1622,17 +1795,28 @@ def export_trip_pdf(trip_id):
             day_activities = activities_by_day[day_date]
             day_num = (day_date - trip_start).days + 1
 
-            # Заголовок дня
-            day_title = f"🗓 День {day_num} • {day_date.strftime('%d %B %Y')}"
-            elements.append(Paragraph(day_title, day_heading_style))
+            day_heading = ParagraphStyle(
+                'DayHeading',
+                parent=normal_style,
+                fontSize=14,
+                fontName=font_bold,
+                textColor=colors.HexColor('#2d3748'),
+                spaceAfter=10,
+                spaceBefore=15,
+                leftIndent=10,
+                backColor=colors.HexColor('#edf2f7'),
+                borderPadding=8
+            )
+
+            day_title = f"День {day_num} • {day_date.strftime('%d %B %Y')}"
+            elements.append(Paragraph(day_title, day_heading))
             elements.append(Spacer(1, 0.2 * cm))
 
-            # Таблиця активностей
             activities_data = []
 
             for activity in day_activities:
                 time_cell = Paragraph(
-                    f'<b>{activity.time or "—"}</b>' if activity.time else '—',
+                    f'<b>{activity.time or "—"}</b>',
                     normal_style
                 )
 
@@ -1642,7 +1826,7 @@ def export_trip_pdf(trip_id):
                 )
 
                 location_cell = Paragraph(
-                    f'📍 {activity.location}' if activity.location else '—',
+                    f' {activity.location}' if activity.location else '—',
                     ParagraphStyle('Location', parent=normal_style, textColor=colors.HexColor('#718096'))
                 )
 
@@ -1678,18 +1862,17 @@ def export_trip_pdf(trip_id):
 
     if packing_items:
         elements.append(PageBreak())
-        elements.append(Paragraph("🎒 СПИСОК РЕЧЕЙ", heading_style))
+        elements.append(Paragraph("СПИСОК РЕЧЕЙ", heading_style))
         elements.append(Spacer(1, 0.3 * cm))
 
-        # Групуємо по категоріях
         items_by_category = defaultdict(list)
 
         category_names = {
-            'clothes': '👕 Одяг',
-            'toiletries': '🧴 Туалетні приналежності',
-            'electronics': '🔌 Електроніка',
-            'documents': '📄 Документи',
-            'other': '📦 Інше'
+            'clothes': ' Одяг',
+            'toiletries': ' Засоби особистої гігієни',
+            'electronics': ' Електроніка',
+            'documents': ' Документи',
+            'other': ' Інше'
         }
 
         for item in packing_items:
@@ -1699,7 +1882,6 @@ def export_trip_pdf(trip_id):
         for category in sorted(items_by_category.keys()):
             items = items_by_category[category]
 
-            # Заголовок категорії
             cat_heading = ParagraphStyle(
                 'CategoryHeading',
                 parent=normal_style,
@@ -1711,7 +1893,6 @@ def export_trip_pdf(trip_id):
             )
             elements.append(Paragraph(category, cat_heading))
 
-            # Список речей
             packing_data = []
 
             for item in items:
@@ -1746,110 +1927,9 @@ def export_trip_pdf(trip_id):
             elements.append(packing_table)
             elements.append(Spacer(1, 0.2 * cm))
 
-    # ========== НОТАТКИ ==========
-
-    notes = TripNote.query.filter_by(trip_id=trip.id).all()
-
-    if notes:
-        elements.append(PageBreak())
-        elements.append(Paragraph("📝 ВАЖЛИВІ НОТАТКИ", heading_style))
-        elements.append(Spacer(1, 0.3 * cm))
-
-        for note in notes:
-            # Картка нотатки
-            note_data = [[
-                Paragraph(f'<b>{note.title}</b>', normal_style),
-                Paragraph(f'<i>{note.category}</i>',
-                          ParagraphStyle('NoteCategory', parent=normal_style, textColor=colors.HexColor('#718096'),
-                                         fontSize=9, alignment=TA_RIGHT))
-            ]]
-
-            note_header = Table(note_data, colWidths=[14 * cm, 4 * cm])
-            note_header.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#edf2f7')),
-                ('ALIGN', (0, 0), (0, 0), 'LEFT'),
-                ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                ('LEFTPADDING', (0, 0), (-1, -1), 12),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 12),
-                ('TOPPADDING', (0, 0), (-1, -1), 8),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 8)
-            ]))
-
-            elements.append(note_header)
-
-            # Тіло нотатки
-            content_data = [[Paragraph(note.content, normal_style)]]
-            note_body = Table(content_data, colWidths=[18 * cm])
-            note_body.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, -1), colors.white),
-                ('LEFTPADDING', (0, 0), (-1, -1), 12),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 12),
-                ('TOPPADDING', (0, 0), (-1, -1), 10),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 10),
-                ('BOX', (0, 0), (-1, -1), 1, colors.HexColor('#e2e8f0'))
-            ]))
-
-            elements.append(note_body)
-            elements.append(Spacer(1, 0.4 * cm))
-
-    # ========== ЧЕКЛІСТ ==========
-
-    checklist = TripChecklist.query.filter_by(trip_id=trip.id).all()
-
-    if checklist:
-        elements.append(Spacer(1, 0.5 * cm))
-        elements.append(Paragraph("✓ ЧЕКЛІСТ ПІДГОТОВКИ", heading_style))
-        elements.append(Spacer(1, 0.3 * cm))
-
-        checklist_data = []
-
-        for item in checklist:
-            status_icon = '✓' if item.is_completed else '○'
-            status_color = colors.HexColor('#48bb78') if item.is_completed else colors.HexColor('#a0aec0')
-
-            status_style = ParagraphStyle(
-                'Status',
-                parent=normal_style,
-                textColor=status_color,
-                fontSize=14
-            )
-
-            item_style = ParagraphStyle(
-                'CheckItem',
-                parent=normal_style,
-                textColor=colors.HexColor('#a0aec0') if item.is_completed else colors.HexColor('#2d3748')
-            )
-
-            checklist_data.append([
-                Paragraph(status_icon, status_style),
-                Paragraph(item.item, item_style),
-                Paragraph(item.category or '—', item_style),
-                Paragraph(item.due_date.strftime('%d.%m') if item.due_date else '—', item_style)
-            ])
-
-        checklist_table = Table(checklist_data, colWidths=[1.5 * cm, 10 * cm, 4 * cm, 2.5 * cm])
-        checklist_table.setStyle(TableStyle([
-            ('ALIGN', (0, 0), (0, -1), 'CENTER'),
-            ('ALIGN', (1, 0), (-1, -1), 'LEFT'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('FONTNAME', (0, 0), (-1, -1), font_name),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('LEFTPADDING', (0, 0), (-1, -1), 10),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 10),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-            ('BACKGROUND', (0, 0), (-1, -1), colors.white),
-            ('ROWBACKGROUNDS', (0, 0), (-1, -1), [colors.white, colors.HexColor('#f7fafc')])
-        ]))
-
-        elements.append(checklist_table)
-
     # ========== ФУТЕР ==========
 
     elements.append(Spacer(1, 1.5 * cm))
-
-    # Декоративна лінія
     elements.append(line)
     elements.append(Spacer(1, 0.3 * cm))
 
@@ -1868,7 +1948,6 @@ def export_trip_pdf(trip_id):
     # Генеруємо PDF
     doc.build(elements)
 
-    # Повертаємо файл
     buffer.seek(0)
     filename = f"trip_{trip.title.replace(' ', '_')}_{trip.start_date.strftime('%Y%m%d')}.pdf"
 
@@ -1889,10 +1968,64 @@ class TripChecklist(db.Model):
     notes = db.Column(db.Text)
     trip_id = db.Column(db.Integer, db.ForeignKey('trip.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
+    trip = db.relationship('Trip', backref='checklist_items')
 
     def __repr__(self):
         return f'<TripChecklist {self.item}>'
 
+
+# Транспорт
+class Transport(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    trip_id = db.Column(db.Integer, db.ForeignKey('trip.id'), nullable=False)
+    type = db.Column(db.String(50), nullable=False)  # plane, train, bus, car, ferry
+    from_location = db.Column(db.String(200), nullable=False)
+    to_location = db.Column(db.String(200), nullable=False)
+    departure_date = db.Column(db.DateTime, nullable=False)
+    arrival_date = db.Column(db.DateTime, nullable=True)
+    carrier = db.Column(db.String(200))  # Авіакомпанія, автобусна компанія
+    ticket_number = db.Column(db.String(100))
+    seat_number = db.Column(db.String(20))
+    cost = db.Column(db.Float, default=0)
+    booking_reference = db.Column(db.String(100))
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+
+    trip = db.relationship('Trip', backref='transports')
+
+
+# Напрямки (міста) в поїздці
+class TripDestination(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    trip_id = db.Column(db.Integer, db.ForeignKey('trip.id'), nullable=False)
+    city = db.Column(db.String(200), nullable=False)
+    country = db.Column(db.String(200), nullable=False)
+    arrival_date = db.Column(db.Date, nullable=True)
+    departure_date = db.Column(db.Date, nullable=True)
+    order = db.Column(db.Integer, default=0)  # Порядок відвідування
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+
+    trip = db.relationship('Trip', backref='destinations')
+
+    def __repr__(self):
+        return f'<TripDestination {self.city}, {self.country}>'
+
+
+# Відвідані країни
+class VisitedCountry(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    country_name = db.Column(db.String(200), nullable=False)
+    status = db.Column(db.String(20), nullable=False)  # visited, planned
+    visit_date = db.Column(db.Date, nullable=True)
+    notes = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+
+    user = db.relationship('User', backref='visited_countries')
+
+    def __repr__(self):
+        return f'<VisitedCountry {self.country_name} - {self.status}>'
 
 # Досягнення користувача
 class UserAchievement(db.Model):
@@ -1906,6 +2039,299 @@ class UserAchievement(db.Model):
     def __repr__(self):
         return f'<Achievement {self.achievement_type}>'
 
+
+# ==================== API ДЛЯ КАРТИ ====================
+
+# Отримати статус країни
+@app.route('/api/country-status/<country_name>')
+@login_required
+def get_country_status(country_name):
+    country = VisitedCountry.query.filter_by(
+        user_id=current_user.id,
+        country_name=country_name
+    ).first()
+
+    if country:
+        return {
+            'status': country.status,
+            'visit_date': country.visit_date.strftime('%Y-%m-%d') if country.visit_date else None,
+            'notes': country.notes
+        }
+    else:
+        return {'status': 'not_visited'}
+
+
+# Встановити статус країни
+@app.route('/api/country-status', methods=['POST'])
+@login_required
+def set_country_status():
+    try:
+        data = request.get_json()
+
+        if not data:
+            return {'success': False, 'error': 'No data provided'}, 400
+
+        country_name = data.get('country_name')
+        status = data.get('status')
+
+        if not country_name or not status:
+            return {'success': False, 'error': 'Missing country_name or status'}, 400
+
+        # Шукаємо чи є вже запис
+        country = VisitedCountry.query.filter_by(
+            user_id=current_user.id,
+            country_name=country_name
+        ).first()
+
+        if status == 'not_visited':
+            # Видаляємо запис якщо скидаємо статус
+            if country:
+                db.session.delete(country)
+                db.session.commit()
+            return {'success': True, 'status': 'not_visited'}
+
+        # Обробляємо дату
+        visit_date = None
+        if data.get('visit_date'):
+            try:
+                visit_date = datetime.strptime(data.get('visit_date'), '%Y-%m-%d').date()
+            except:
+                pass
+
+        # Створюємо або оновлюємо
+        if country:
+            country.status = status
+            country.visit_date = visit_date
+            country.notes = data.get('notes', '')
+        else:
+            country = VisitedCountry(
+                user_id=current_user.id,
+                country_name=country_name,
+                status=status,
+                visit_date=visit_date,
+                notes=data.get('notes', '')
+            )
+            db.session.add(country)
+
+        db.session.commit()
+
+        return {'success': True, 'status': status}
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error in set_country_status: {e}")
+        import traceback
+        traceback.print_exc()
+        return {'success': False, 'error': str(e)}, 500
+
+# ==================== НАПРЯМКИ (МІСТА) ====================
+
+# Додати місто до поїздки
+@app.route('/trip/<int:trip_id>/destination/add', methods=['POST'])
+@login_required
+def add_destination(trip_id):
+    trip = Trip.query.get_or_404(trip_id)
+
+    if trip.user_id != current_user.id:
+        return {'success': False, 'error': 'Access denied'}, 403
+
+    data = request.get_json()
+
+    # Визначаємо порядок (останнє + 1)
+    last_destination = TripDestination.query.filter_by(trip_id=trip_id).order_by(TripDestination.order.desc()).first()
+    order = (last_destination.order + 1) if last_destination else 0
+
+    new_destination = TripDestination(
+        trip_id=trip_id,
+        city=data.get('city'),
+        country=data.get('country'),
+        arrival_date=datetime.strptime(data.get('arrival_date'), '%Y-%m-%d').date() if data.get(
+            'arrival_date') else None,
+        departure_date=datetime.strptime(data.get('departure_date'), '%Y-%m-%d').date() if data.get(
+            'departure_date') else None,
+        order=order,
+        notes=data.get('notes', '')
+    )
+
+    db.session.add(new_destination)
+    db.session.commit()
+
+    return {
+        'success': True,
+        'destination': {
+            'id': new_destination.id,
+            'city': new_destination.city,
+            'country': new_destination.country,
+            'arrival_date': new_destination.arrival_date.strftime('%d.%m.%Y') if new_destination.arrival_date else None,
+            'departure_date': new_destination.departure_date.strftime(
+                '%d.%m.%Y') if new_destination.departure_date else None,
+            'order': new_destination.order
+        }
+    }
+
+
+# Редагувати місто
+@app.route('/trip/<int:trip_id>/destination/<int:destination_id>/edit', methods=['POST'])
+@login_required
+def edit_destination(trip_id, destination_id):
+    destination = TripDestination.query.get_or_404(destination_id)
+
+    if destination.trip.user_id != current_user.id:
+        return {'success': False, 'error': 'Access denied'}, 403
+
+    data = request.get_json()
+
+    destination.city = data.get('city')
+    destination.country = data.get('country')
+    destination.arrival_date = datetime.strptime(data.get('arrival_date'), '%Y-%m-%d').date() if data.get(
+        'arrival_date') else None
+    destination.departure_date = datetime.strptime(data.get('departure_date'), '%Y-%m-%d').date() if data.get(
+        'departure_date') else None
+    destination.notes = data.get('notes', '')
+
+    db.session.commit()
+
+    return {'success': True}
+
+
+# Видалити місто
+@app.route('/trip/<int:trip_id>/destination/<int:destination_id>/delete', methods=['POST'])
+@login_required
+def delete_destination(trip_id, destination_id):
+    destination = TripDestination.query.get_or_404(destination_id)
+
+    if destination.trip.user_id != current_user.id:
+        return {'success': False, 'error': 'Access denied'}, 403
+
+    db.session.delete(destination)
+    db.session.commit()
+
+    return {'success': True}
+
+
+# Змінити порядок міст
+@app.route('/trip/<int:trip_id>/destinations/reorder', methods=['POST'])
+@login_required
+def reorder_destinations(trip_id):
+    trip = Trip.query.get_or_404(trip_id)
+
+    if trip.user_id != current_user.id:
+        return {'success': False, 'error': 'Access denied'}, 403
+
+    data = request.get_json()
+    destination_ids = data.get('destination_ids', [])
+
+    for index, destination_id in enumerate(destination_ids):
+        destination = TripDestination.query.get(destination_id)
+        if destination and destination.trip_id == trip_id:
+            destination.order = index
+
+    db.session.commit()
+
+    return {'success': True}
+
+# ==================== ТРАНСПОРТ ====================
+
+# Список транспорту
+@app.route('/trip/<int:trip_id>/transport')
+@login_required
+def transport_list(trip_id):
+    trip = Trip.query.get_or_404(trip_id)
+
+    if trip.user_id != current_user.id:
+        flash('У вас немає доступу', 'danger')
+        return redirect(url_for('dashboard'))
+
+    transports = Transport.query.filter_by(trip_id=trip_id).order_by(Transport.departure_date).all()
+
+    return render_template('transport_list.html',
+                           trip=trip,
+                           transports=transports)
+
+
+# Додати транспорт
+@app.route('/trip/<int:trip_id>/transport/new', methods=['GET', 'POST'])
+@login_required
+def new_transport(trip_id):
+    trip = Trip.query.get_or_404(trip_id)
+
+    if trip.user_id != current_user.id:
+        flash('У вас немає доступу', 'danger')
+        return redirect(url_for('dashboard'))
+
+    if request.method == 'POST':
+        new_transport = Transport(
+            trip_id=trip_id,
+            type=request.form.get('type'),
+            from_location=request.form.get('from_location'),
+            to_location=request.form.get('to_location'),
+            departure_date=datetime.strptime(request.form.get('departure_date'), '%Y-%m-%dT%H:%M'),
+            arrival_date=datetime.strptime(request.form.get('arrival_date'), '%Y-%m-%dT%H:%M') if request.form.get(
+                'arrival_date') else None,
+            carrier=request.form.get('carrier'),
+            ticket_number=request.form.get('ticket_number'),
+            seat_number=request.form.get('seat_number'),
+            cost=float(request.form.get('cost', 0)),
+            booking_reference=request.form.get('booking_reference'),
+            notes=request.form.get('notes')
+        )
+
+        db.session.add(new_transport)
+        db.session.commit()
+
+        flash('Транспорт додано!', 'success')
+        return redirect(url_for('transport_list', trip_id=trip_id))
+
+    return render_template('transport_form.html', trip=trip)
+
+
+# Редагувати транспорт
+@app.route('/trip/<int:trip_id>/transport/<int:transport_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_transport(trip_id, transport_id):
+    transport = Transport.query.get_or_404(transport_id)
+
+    if transport.trip.user_id != current_user.id:
+        flash('У вас немає доступу', 'danger')
+        return redirect(url_for('dashboard'))
+
+    if request.method == 'POST':
+        transport.type = request.form.get('type')
+        transport.from_location = request.form.get('from_location')
+        transport.to_location = request.form.get('to_location')
+        transport.departure_date = datetime.strptime(request.form.get('departure_date'), '%Y-%m-%dT%H:%M')
+        transport.arrival_date = datetime.strptime(request.form.get('arrival_date'),
+                                                   '%Y-%m-%dT%H:%M') if request.form.get('arrival_date') else None
+        transport.carrier = request.form.get('carrier')
+        transport.ticket_number = request.form.get('ticket_number')
+        transport.seat_number = request.form.get('seat_number')
+        transport.cost = float(request.form.get('cost', 0))
+        transport.booking_reference = request.form.get('booking_reference')
+        transport.notes = request.form.get('notes')
+
+        db.session.commit()
+
+        flash('Транспорт оновлено!', 'success')
+        return redirect(url_for('transport_list', trip_id=trip_id))
+
+    return render_template('transport_form.html', trip=transport.trip, transport=transport)
+
+
+# Видалити транспорт
+@app.route('/trip/<int:trip_id>/transport/<int:transport_id>/delete', methods=['POST'])
+@login_required
+def delete_transport(trip_id, transport_id):
+    transport = Transport.query.get_or_404(transport_id)
+
+    if transport.trip.user_id != current_user.id:
+        flash('У вас немає доступу', 'danger')
+        return redirect(url_for('dashboard'))
+
+    db.session.delete(transport)
+    db.session.commit()
+
+    flash('Транспорт видалено', 'success')
+    return redirect(url_for('transport_list', trip_id=trip_id))
 # Видалити шаблон
 @app.route('/templates/<int:template_id>/delete', methods=['POST'])
 @login_required
@@ -2013,6 +2439,20 @@ def trip_notes(trip_id):
                            completion_percentage=completion_percentage)
 
 
+# Перемикач виконання пункту чекліста
+@app.route('/trip/<int:trip_id>/checklist/<int:item_id>/toggle', methods=['POST'])
+@login_required
+def toggle_checklist_item(trip_id, item_id):
+    item = TripChecklist.query.get_or_404(item_id)
+
+    if item.trip.user_id != current_user.id:
+        flash('У вас немає доступу', 'danger')
+        return redirect(url_for('dashboard'))
+
+    item.is_completed = not item.is_completed
+    db.session.commit()
+
+    return redirect(url_for('trip_notes', trip_id=trip_id))
 # Додати нотатку
 @app.route('/trip/<int:trip_id>/notes/add', methods=['POST'])
 @login_required
@@ -2115,20 +2555,6 @@ def add_checklist_item(trip_id):
     flash('Пункт додано до чекліста!', 'success')
     return redirect(url_for('trip_notes', trip_id=trip_id))
 
-
-# Відмітити пункт чекліста
-@app.route('/trip/<int:trip_id>/checklist/<int:item_id>/toggle', methods=['POST'])
-@login_required
-def toggle_checklist_item(trip_id, item_id):
-    item = TripChecklist.query.get_or_404(item_id)
-
-    if item.trip.user_id != current_user.id:
-        return {'success': False}, 403
-
-    item.is_completed = not item.is_completed
-    db.session.commit()
-
-    return {'success': True, 'completed': item.is_completed}
 
 
 # Видалити пункт чекліста
