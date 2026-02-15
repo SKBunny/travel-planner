@@ -2754,8 +2754,12 @@ def trip_statistics(trip_id):
     accommodations = Accommodation.query.filter_by(trip_id=trip.id).all()
     total_accommodation_cost = sum(acc.total_price for acc in accommodations)
 
+    # Витрати на транспорт
+    transports = Transport.query.filter_by(trip_id=trip.id).all()
+    total_transport_cost = sum(transport.cost for transport in transports)
+
     # Загальні витрати
-    total_spent = total_activities_cost + total_accommodation_cost
+    total_spent = total_activities_cost + total_accommodation_cost + total_transport_cost
     remaining_budget = trip.budget - total_spent
     budget_percentage = (total_spent / trip.budget * 100) if trip.budget > 0 else 0
 
@@ -2771,19 +2775,34 @@ def trip_statistics(trip_id):
     if total_accommodation_cost > 0:
         category_costs['accommodation_hotels'] = total_accommodation_cost
 
+    # Додаємо транспорт як окрему категорію
+    if total_transport_cost > 0:
+        category_costs['transport_main'] = total_transport_cost
+
     # Відсоток виконаних активностей
     completed_activities = len([a for a in activities if a.completed])
     completion_rate = (completed_activities / len(activities) * 100) if activities else 0
 
     # Назви категорій українською
     category_names = {
-        'transport': '🚗 Транспорт',
+        'transport': '🚗 Транспорт (активності)',
+        'transport_main': '✈️ Транспорт',
         'food': '🍽️ Їжа',
         'activity': '🎡 Розваги',
         'accommodation': '🏨 Додаткове проживання',
         'shopping': '🛍️ Покупки',
         'general': '🎯 Загальне',
         'accommodation_hotels': '🏨 Готелі'
+    }
+
+    transport_types = {
+        'plane': '✈️ Літак',
+        'train': '🚆 Поїзд',
+        'bus': '🚌 Автобус',
+        'car': '🚗 Автомобіль',
+        'ferry': '⛴️ Пором',
+        'taxi': '🚕 Таксі',
+        'metro': '🚇 Метро'
     }
 
     # Підготовка даних для діаграми
@@ -2821,6 +2840,17 @@ def trip_statistics(trip_id):
             'title': f"{acc.name} ({nights} ночей)",
             'category': '🏨 Готелі',
             'cost': acc.total_price
+        })
+    # Додаємо транспорт
+    for transport in transports:
+        transport_type_name = transport_types.get(transport.type, transport.type)
+        expense_list.append({
+            'type': 'transport',
+            'date': transport.departure_date,
+            'title': f"{transport.from_location} → {transport.to_location}",
+            'category': '✈️ Транспорт',
+            'transport_type': transport_type_name,  # Окремо тип
+            'cost': transport.cost
         })
 
     # Сортуємо за датою

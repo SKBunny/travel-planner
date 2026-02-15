@@ -140,36 +140,37 @@
         </div>
 
         <!-- Налаштування -->
-        <div class="card shadow-sm mt-4">
-            <div class="card-header bg-light">
-                <h5 class="mb-0"><i class="bi bi-gear"></i> Налаштування</h5>
-            </div>
-            <div class="card-body">
-                <div class="settings-item">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div>
-                            <h6 class="mb-0">Темна тема</h6>
-                            <small class="text-muted">Використовувати темне оформлення</small>
-                        </div>
-                        <button class="btn btn-outline-primary btn-sm" onclick="toggleTheme()">
-                            <i class="bi bi-moon-stars"></i> Перемкнути
-                        </button>
-                    </div>
+        <!-- Налаштування -->
+<div class="card shadow-sm mt-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0"><i class="bi bi-gear"></i> Налаштування</h5>
+    </div>
+    <div class="card-body">
+        <div class="settings-item">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h6 class="mb-0">Темна тема</h6>
+                    <small class="text-muted">Використовувати темне оформлення</small>
                 </div>
-                <hr>
-                <div class="settings-item">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h6 class="mb-0 text-danger">Видалити акаунт</h6>
-                            <small class="text-muted">Назавжди видалити ваш акаунт та всі дані</small>
-                        </div>
-                        <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
-                            <i class="bi bi-trash"></i> Видалити
-                        </button>
-                    </div>
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="darkModeSwitch" style="width: 3em; height: 1.5em;">
                 </div>
             </div>
         </div>
+        <hr>
+        <div class="settings-item">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-0 text-danger">Видалити акаунт</h6>
+                    <small class="text-muted">Назавжди видалити ваш акаунт та всі дані</small>
+                </div>
+                <button class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                    <i class="bi bi-trash"></i> Видалити
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
     </div>
 </div>
 
@@ -201,5 +202,33 @@
         </div>
     </div>
 </div>
+<script>
+// Темна тема
+setTimeout(function() {
+    const darkModeSwitch = document.getElementById('darkModeSwitch');
+
+    if (!darkModeSwitch) return;
+
+    // Завантажуємо збережену тему
+    const savedTheme = localStorage.getItem('theme');
+
+    // Встановлюємо початковий стан
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+        darkModeSwitch.checked = true;
+    }
+
+    // Обробник зміни
+    darkModeSwitch.addEventListener('change', function() {
+        if (this.checked) {
+            document.body.classList.add('dark-mode');
+            localStorage.setItem('theme', 'dark');
+        } else {
+            document.body.classList.remove('dark-mode');
+            localStorage.setItem('theme', 'light');
+        }
+    });
+}, 100);
+</script>
 
 {% endblock %}

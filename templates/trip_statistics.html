@@ -151,7 +151,6 @@
                             <th>Дата</th>
                             <th>Назва</th>
                             <th>Категорія</th>
-                            <th>Тип</th>
                             <th class="text-end">Сума</th>
                         </tr>
                     </thead>
@@ -159,14 +158,16 @@
                         {% for expense in expense_list %}
                             <tr>
                                 <td>{{ expense.date.strftime('%d.%m.%Y') }}</td>
-                                <td>{{ expense.title }}</td>
-                                <td>{{ expense.category }}</td>
                                 <td>
-                                    {% if expense.type == 'activity' %}
-                                        <span class="badge bg-info">Активність</span>
+                                    {% if expense.type == 'transport' %}
+                                        <strong>{{ expense.transport_type }}</strong><br>
+                                        <small class="text-muted">{{ expense.title }}</small>
                                     {% else %}
-                                        <span class="badge bg-primary">Готель</span>
+                                        {{ expense.title }}
                                     {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ expense.category }}</span>
                                 </td>
                                 <td class="text-end">
                                     <strong>{{ "%.2f"|format(expense.cost) }} грн</strong>
@@ -174,7 +175,7 @@
                             </tr>
                         {% endfor %}
                         <tr class="table-light">
-                            <td colspan="4" class="text-end"><strong>ЗАГАЛОМ:</strong></td>
+                            <td colspan="3" class="text-end"><strong>ЗАГАЛОМ:</strong></td>
                             <td class="text-end"><strong>{{ "%.2f"|format(total_spent) }} грн</strong></td>
                         </tr>
                     </tbody>

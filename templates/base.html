@@ -27,7 +27,7 @@
 <!-- Navigation -->
 <nav class="navbar navbar-expand-lg custom-navbar fixed-top">
     <div class="container-fluid">
-        <a class="navbar-brand brand-logo" href="{{ url_for('index') }}">
+        <a class="navbar-brand brand-logo d-flex align-items-center" href="{{ url_for('index') }}">
             <span class="brand-icon">✈️</span>
             <span class="brand-text">Travel<span class="brand-highlight">Planner</span></span>
         </a>
@@ -58,55 +58,66 @@
                 <!-- Меню -->
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link nav-link-custom" href="{{ url_for('dashboard') }}">
-                            <i class="bi bi-speedometer2"></i> Статистика
+                        <a class="nav-link nav-link-custom d-flex align-items-center" href="{{ url_for('dashboard') }}">
+                            <i class="bi bi-speedometer2 me-1"></i>
+                            <span>Статистика</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link nav-link-custom" href="{{ url_for('trip_calendar') }}">
-                            <i class="bi bi-calendar3"></i> Календар
+                        <a class="nav-link nav-link-custom d-flex align-items-center" href="{{ url_for('trip_calendar') }}">
+                            <i class="bi bi-calendar3 me-1"></i>
+                            <span>Календар</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link nav-link-custom" href="{{ url_for('currency_converter') }}">
-                            <i class="bi bi-currency-exchange"></i> Валюта
+                        <a class="nav-link nav-link-custom d-flex align-items-center" href="{{ url_for('currency_converter') }}">
+                            <i class="bi bi-currency-exchange me-1"></i>
+                            <span>Валюта</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link nav-link-custom" href="{{ url_for('templates_list') }}">
-                            <i class="bi bi-file-earmark-text"></i> Шаблони
+                        <a class="nav-link nav-link-custom d-flex align-items-center" href="{{ url_for('templates_list') }}">
+                            <i class="bi bi-file-earmark-text me-1"></i>
+                            <span>Шаблони</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link nav-link-custom" href="{{ url_for('world_map') }}">
-                            <i class="bi bi-globe-americas"></i> Карта світу
+                        <a class="nav-link nav-link-custom d-flex align-items-center" href="{{ url_for('world_map') }}">
+                            <i class="bi bi-globe-americas me-1"></i>
+                            <span>Карта світу</span>
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link nav-link-custom" href="{{ url_for('achievements_page') }}">
-                            <i class="bi bi-trophy"></i> Досягнення
-                        </a>
-                    </li>
+
                     <!-- Dropdown користувача -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle nav-link-custom"
+                        <a class="nav-link dropdown-toggle nav-link-custom d-flex align-items-center"
                            href="#"
                            id="userDropdown"
                            role="button"
                            data-bs-toggle="dropdown"
                            aria-expanded="false">
-                            <i class="bi bi-person-circle"></i> {{ current_user.username }}
+                            <i class="bi bi-person-circle me-1"></i>
+                            <span>{{ current_user.username }}</span>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li>
-                                <a class="dropdown-item" href="{{ url_for('user_profile') }}">
-                                    <i class="bi bi-person"></i> Профіль
+                                <a class="dropdown-item d-flex align-items-center" href="{{ url_for('user_profile') }}">
+                                    <i class="bi bi-person me-2"></i>
+                                    <span>Профіль</span>
                                 </a>
                             </li>
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center" href="{{ url_for('achievements_page') }}">
+                                    <i class="bi bi-trophy me-2"></i>
+                                    <span>Досягнення</span>
+                                </a>
+                            </li>
+
                             <li><hr class="dropdown-divider"></li>
                             <li>
-                                <a class="dropdown-item" href="{{ url_for('logout') }}">
-                                    <i class="bi bi-box-arrow-right"></i> Вийти
+                                <a class="dropdown-item d-flex align-items-center" href="{{ url_for('logout') }}">
+                                    <i class="bi bi-box-arrow-right me-2"></i>
+                                    <span>Вийти</span>
                                 </a>
                             </li>
                         </ul>
@@ -116,13 +127,15 @@
                 <!-- Меню для незалогінених -->
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link nav-link-custom" href="{{ url_for('login') }}">
-                            <i class="bi bi-box-arrow-in-right"></i> Увійти
+                        <a class="nav-link nav-link-custom d-flex align-items-center" href="{{ url_for('login') }}">
+                            <i class="bi bi-box-arrow-in-right me-1"></i>
+                            <span>Увійти</span>
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link btn btn-primary text-white" href="{{ url_for('register') }}">
-                            <i class="bi bi-person-plus"></i> Реєстрація
+                        <a class="nav-link btn btn-primary text-white d-flex align-items-center" href="{{ url_for('register') }}">
+                            <i class="bi bi-person-plus me-1"></i>
+                            <span>Реєстрація</span>
                         </a>
                     </li>
                 </ul>
@@ -208,7 +221,6 @@
 
         <div class="row align-items-center">
             <div class="col-md-6 text-center text-md-start">
-                <p class="mb-0">&copy; 2026 TravelPlanner. Всі права захищені.</p>
             </div>
             <div class="col-md-6 text-center text-md-end">
                 <p class="mb-0">Зроблено з <i class="bi bi-heart-fill text-danger"></i> для мандрівників</p>

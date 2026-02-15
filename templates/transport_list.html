@@ -27,120 +27,137 @@
             <h5 class="mb-4"><i class="bi bi-map"></i> Ваш маршрут</h5>
             <div class="route-timeline">
                 {% for transport in transports %}
-                <div class="route-step">
-                    <div class="route-marker">
-                        {% if transport.type == 'plane' %}
-                            <i class="bi bi-airplane-fill text-primary"></i>
-                        {% elif transport.type == 'train' %}
-                            <i class="bi bi-train-front-fill text-success"></i>
-                        {% elif transport.type == 'bus' %}
-                            <i class="bi bi-bus-front-fill text-warning"></i>
-                        {% elif transport.type == 'car' %}
-                            <i class="bi bi-car-front-fill text-info"></i>
-                        {% else %}
-                            <i class="bi bi-dot text-secondary"></i>
-                        {% endif %}
-                    </div>
-                    <div class="route-content">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div>
-                                <h6 class="mb-1">
-                                    {{ transport.from_location }} → {{ transport.to_location }}
-                                </h6>
-                                <p class="text-muted mb-1">
-                                    <i class="bi bi-calendar"></i> 
-                                    {{ transport.departure_date.strftime('%d.%m.%Y %H:%M') }}
-                                    {% if transport.arrival_date %}
-                                        → {{ transport.arrival_date.strftime('%d.%m.%Y %H:%M') }}
-                                    {% endif %}
-                                </p>
-                                {% if transport.carrier %}
-                                    <small class="text-muted">
-                                        <i class="bi bi-building"></i> {{ transport.carrier }}
-                                    </small>
-                                {% endif %}
-                                {% if transport.ticket_number %}
-                                    <small class="text-muted ms-2">
-                                        <i class="bi bi-ticket-perforated"></i> {{ transport.ticket_number }}
-                                    </small>
-                                {% endif %}
-                            </div>
-                            <div>
-                                {% if transport.cost > 0 %}
-                                    <span class="badge bg-success">{{ transport.cost }} грн</span>
-                                {% endif %}
-                                <a href="{{ url_for('edit_transport', trip_id=trip.id, transport_id=transport.id) }}" 
-                                   class="btn btn-sm btn-outline-warning ms-2">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                                <button type="button" class="btn btn-sm btn-outline-danger" 
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#deleteModal{{ transport.id }}">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                        {% if transport.notes %}
-                            <small class="text-muted">{{ transport.notes }}</small>
-                        {% endif %}
-                    </div>
+<div class="route-step">
+    <div class="route-marker">
+        {% if transport.type == 'plane' %}
+            <i class="bi bi-airplane-fill text-primary"></i>
+        {% elif transport.type == 'train' %}
+            <i class="bi bi-train-front-fill text-success"></i>
+        {% elif transport.type == 'bus' %}
+            <i class="bi bi-bus-front-fill text-warning"></i>
+        {% elif transport.type == 'car' %}
+            <i class="bi bi-car-front-fill text-info"></i>
+        {% else %}
+            <i class="bi bi-dot text-secondary"></i>
+        {% endif %}
+    </div>
+    <div class="route-content">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+            <div>
+                <h6 class="mb-1">
+                    {{ transport.from_location }} → {{ transport.to_location }}
+                </h6>
+                <p class="text-muted mb-1">
+                    <i class="bi bi-calendar"></i>
+                    {{ transport.departure_date.strftime('%d.%m.%Y %H:%M') }}
+                    {% if transport.arrival_date %}
+                        → {{ transport.arrival_date.strftime('%d.%m.%Y %H:%M') }}
+                    {% endif %}
+                </p>
+                {% if transport.carrier %}
+                    <small class="text-muted">
+                        <i class="bi bi-building"></i> {{ transport.carrier }}
+                    </small>
+                {% endif %}
+                {% if transport.ticket_number %}
+                    <small class="text-muted ms-2">
+                        <i class="bi bi-ticket-perforated"></i> {{ transport.ticket_number }}
+                    </small>
+                {% endif %}
+            </div>
+            <div class="text-nowrap">
+                {% if transport.cost > 0 %}
+                    <span class="badge bg-success">{{ transport.cost }} грн</span>
+                {% endif %}
+                <a href="{{ url_for('edit_transport', trip_id=trip.id, transport_id=transport.id) }}"
+                   class="btn btn-sm btn-outline-warning ms-2">
+                    <i class="bi bi-pencil"></i>
+                </a>
+                <button type="button" class="btn btn-sm btn-outline-danger"
+                        data-bs-toggle="modal"
+                        data-bs-target="#deleteModal{{ transport.id }}">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+        {% if transport.notes %}
+            <small class="text-muted">{{ transport.notes }}</small>
+        {% endif %}
+    </div>
+</div>
+{% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалі видалення -->
+    {% for transport in transports %}
+    <div class="modal fade" id="deleteModal{{ transport.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Видалити транспорт?</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                
-                <!-- Modal видалення -->
-                <div class="modal fade" id="deleteModal{{ transport.id }}" tabindex="-1">
-                    <div class="modal-dialog modal-sm">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h6 class="modal-title">Видалити транспорт?</h6>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                            </div>
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Скасувати</button>
-                                <form method="POST" action="{{ url_for('delete_transport', trip_id=trip.id, transport_id=transport.id) }}">
-                                    <button type="submit" class="btn btn-sm btn-danger">Видалити</button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
+                <div class="modal-body">
+                    <p class="mb-0">Ви впевнені що хочете видалити маршрут <strong>{{ transport.from_location }} → {{ transport.to_location }}</strong>?</p>
                 </div>
-                {% endfor %}
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+                    <form method="POST" action="{{ url_for('delete_transport', trip_id=trip.id, transport_id=transport.id) }}" style="display: inline;">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash"></i> Видалити
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
             </div>
         </div>
     </div>
     
     <!-- Загальна інформація -->
-    <div class="row">
-        <div class="col-md-4 mb-3">
-            <div class="card shadow-sm text-center">
-                <div class="card-body">
-                    <i class="bi bi-geo-alt" style="font-size: 2rem; color: #667eea;"></i>
-                    <h4 class="mt-2">{{ transports|length }}</h4>
-                    <p class="mb-0 text-muted">Переміщень</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4 mb-3">
-            <div class="card shadow-sm text-center">
-                <div class="card-body">
-                    <i class="bi bi-cash-stack" style="font-size: 2rem; color: #48bb78;"></i>
-                    <h4 class="mt-2">{{ transports|sum(attribute='cost') }} грн</h4>
-                    <p class="mb-0 text-muted">Вартість транспорту</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4 mb-3">
-            <div class="card shadow-sm text-center">
-                <div class="card-body">
-                    <i class="bi bi-clock-history" style="font-size: 2rem; color: #f6ad55;"></i>
-                    <h4 class="mt-2">
-                        {% set total_time = (transports[-1].arrival_date - transports[0].departure_date).total_seconds() / 3600 if transports[-1].arrival_date else 0 %}
-                        {{ "%.1f"|format(total_time) }} год
-                    </h4>
-                    <p class="mb-0 text-muted">Час в дорозі</p>
-                </div>
+    <!-- Загальна інформація -->
+<div class="row g-3 mb-4 justify-content-center">
+    <div class="col-lg-3 col-md-4">
+        <div class="card shadow-sm text-center">
+            <div class="card-body py-3">
+                <i class="bi bi-geo-alt" style="font-size: 2rem; color: #667eea;"></i>
+                <h4 class="mt-2 mb-1">{{ transports|length }}</h4>
+                <p class="mb-0 text-muted small">Переміщення</p>
             </div>
         </div>
     </div>
+    <div class="col-lg-3 col-md-4">
+        <div class="card shadow-sm text-center">
+            <div class="card-body py-3">
+                <i class="bi bi-cash-stack" style="font-size: 2rem; color: #48bb78;"></i>
+                <h4 class="mt-2 mb-1">{{ transports|sum(attribute='cost') }} грн</h4>
+                <p class="mb-0 text-muted small">Вартість транспорту</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-4">
+        <div class="card shadow-sm text-center">
+            <div class="card-body py-3">
+                <i class="bi bi-clock-history" style="font-size: 2rem; color: #f6ad55;"></i>
+                <h4 class="mt-2 mb-1">
+                    {% set ns = namespace(total=0) %}
+                    {% for transport in transports %}
+                        {% if transport.arrival_date %}
+                            {% set duration = (transport.arrival_date - transport.departure_date).total_seconds() / 3600 %}
+                            {% set ns.total = ns.total + duration %}
+                        {% endif %}
+                    {% endfor %}
+                    {{ "%.1f"|format(ns.total) }} год
+                </h4>
+                <p class="mb-0 text-muted small">Час в дорозі</p>
+            </div>
+        </div>
+    </div>
+</div>
 {% else %}
     <div class="text-center py-5">
         <i class="bi bi-airplane" style="font-size: 4rem; color: #cbd5e0;"></i>
