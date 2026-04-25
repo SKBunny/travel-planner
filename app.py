@@ -3273,8 +3273,8 @@ def ai_page():
     return render_template("AI.html")
 
 # Налаштування Gemini (можна винести за межі маршруту)
-GEMINI_API_KEY = "AIzaSyCURym2NyxW_A6uuhdRmclj2AucD1dTQTM"
-genai.configure(api_key=GEMINI_API_KEY)
+api_key = os.getenv("GOOGLE_API_KEY")
+genai.configure(api_key=api_key)
 
 # Вибираємо модель (flash — найшвидша і безкоштовна)
 model = genai.GenerativeModel(
