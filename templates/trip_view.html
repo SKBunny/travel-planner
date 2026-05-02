@@ -146,7 +146,7 @@
         <div class="destinations-list" id="destinationsList">
             {% for destination in trip.destinations|sort(attribute='order') %}
             <div class="destination-item mb-3" data-destination-id="{{ destination.id }}">
-                <div class="d-flex align-items-start">
+                <div class="d-flex align-items-center">
                     <span class="destination-drag-handle me-2">
                         <i class="bi bi-grip-vertical"></i>
                     </span>
@@ -171,15 +171,13 @@
                         <p class="text-muted small mb-0 mt-1">{{ destination.notes }}</p>
                         {% endif %}
                     </div>
-                    <div>
-                        <button class="btn btn-sm btn-outline-primary"
-                                onclick="editDestination({{ destination.id }}, '{{ destination.city }}', '{{ destination.country }}', '{{ destination.arrival_date.strftime('%Y-%m-%d') if destination.arrival_date else '' }}', '{{ destination.departure_date.strftime('%Y-%m-%d') if destination.departure_date else '' }}', '{{ destination.notes }}')">
+                    <div class="destination-actions">
+                        <button class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-pencil"></i>
-                        </button>
-                        <button class="btn btn-sm btn-outline-danger"
-                                onclick="deleteDestination({{ destination.id }})">
-                            <i class="bi bi-trash"></i>
-                        </button>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger">
+                        <i class="bi bi-trash"></i>
+                    </button>
                     </div>
                 </div>
             </div>

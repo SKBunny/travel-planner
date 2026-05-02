@@ -12,19 +12,21 @@
         
         <!-- Форма пошуку -->
         <form action="{{ url_for('global_search') }}" method="GET" class="mb-4">
-            <div class="input-group input-group-lg">
-                <span class="input-group-text">
-                    <i class="bi bi-search"></i>
-                </span>
-                <input type="search" 
-                       class="form-control" 
-                       name="q" 
-                       value="{{ query }}"
-                       placeholder="Пошук поїздок, активностей, нотаток..."
-                       autofocus>
-                <button type="submit" class="btn btn-primary">Шукати</button>
-            </div>
-        </form>
+    <div class="search-wrapper-large">
+        <i class="bi bi-search search-icon"></i>
+
+        <input type="search"
+               class="form-control search-input-large"
+               name="q"
+               value="{{ query }}"
+               placeholder="Пошук поїздок, активностей, нотаток..."
+               autofocus>
+
+        <button type="submit" class="btn btn-primary search-btn">
+            Шукати
+        </button>
+    </div>
+</form>
     </div>
 </div>
 

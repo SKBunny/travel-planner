@@ -39,21 +39,23 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             {% if current_user.is_authenticated %}
                 <!-- Пошук -->
-                <form class="d-none d-lg-flex mx-3" style="position: relative; max-width: 400px;" action="{{ url_for('global_search') }}" method="GET">
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text bg-white">
-                            <i class="bi bi-search text-primary"></i>
-                        </span>
-                        <input type="search"
-                               class="form-control border-start-0"
-                               name="q"
-                               id="globalSearch"
-                               placeholder="Пошук..."
-                               autocomplete="off"
-                               style="box-shadow: none;">
-                    </div>
-                    <div id="quickResults" class="quick-search-results" style="display: none;"></div>
-                </form>
+                <form class="d-none d-lg-flex mx-3 search-form"
+      action="{{ url_for('global_search') }}"
+      method="GET">
+
+    <div class="search-wrapper">
+        <i class="bi bi-search search-icon"></i>
+
+        <input type="search"
+               class="form-control search-input"
+               name="q"
+               id="globalSearch"
+               placeholder="Пошук..."
+               autocomplete="off">
+    </div>
+
+    <div id="quickResults" class="quick-search-results" style="display: none;"></div>
+</form>
 
                 <!-- Меню -->
                 <ul class="navbar-nav ms-auto">

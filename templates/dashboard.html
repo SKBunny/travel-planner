@@ -205,11 +205,16 @@
         <!-- Пошук та фільтри -->
         <form method="GET" action="{{ url_for('dashboard') }}" class="row g-3">
             <div class="col-md-4">
-                <div class="input-group">
-                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" class="form-control" name="search" placeholder="Пошук по назві або напрямку..." value="{{ search_query }}">
-                </div>
-            </div>
+    <div class="search-wrapper-filter">
+        <i class="bi bi-search search-icon-filter"></i>
+
+        <input type="text"
+               class="form-control search-input-filter"
+               name="search"
+               placeholder="Пошук по назві або напрямку..."
+               value="{{ search_query }}">
+    </div>
+</div>
 
             <div class="col-md-3">
                 <select class="form-select" name="status">

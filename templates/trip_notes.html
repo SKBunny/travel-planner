@@ -29,26 +29,32 @@
                     <div class="notes-list">
                         {% for note in notes %}
                             <div class="note-item {% if note.is_pinned %}pinned{% endif %} mb-3">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <h6 class="mb-0">
-                                        {% if note.is_pinned %}
-                                            <i class="bi bi-pin-angle-fill text-warning"></i>
-                                        {% endif %}
-                                        {{ note.title }}
-                                    </h6>
-                                    <div>
-                                        <span class="badge bg-info">{{ note.category }}</span>
-                                        <button class="btn btn-sm btn-link text-primary" onclick="editNote({{ note.id }}, '{{ note.title }}', '{{ note.content }}', '{{ note.category }}', {{ note.is_pinned|lower }})">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
-                                        <form method="POST" action="{{ url_for('delete_note', trip_id=trip.id, note_id=note.id) }}"
-                                              class="d-inline" onsubmit="return confirm('Видалити цю нотатку?')">
-                                            <button type="submit" class="btn btn-sm btn-link text-danger">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </div>
+                                <div class="note-header d-flex justify-content-between align-items-start mb-2">
+    <h6 class="note-title mb-0">
+        {% if note.is_pinned %}
+            <i class="bi bi-pin-angle-fill text-warning"></i>
+        {% endif %}
+        {{ note.title }}
+    </h6>
+
+    <div class="note-actions">
+        <span class="badge bg-info">{{ note.category }}</span>
+
+        <button class="btn btn-sm btn-link text-primary"
+                onclick="editNote({{ note.id }}, '{{ note.title }}', '{{ note.content }}', '{{ note.category }}', {{ note.is_pinned|lower }})">
+            <i class="bi bi-pencil"></i>
+        </button>
+
+        <form method="POST"
+              action="{{ url_for('delete_note', trip_id=trip.id, note_id=note.id) }}"
+              class="d-inline"
+              onsubmit="return confirm('Видалити цю нотатку?')">
+            <button type="submit" class="btn btn-sm btn-link text-danger">
+                <i class="bi bi-trash"></i>
+            </button>
+        </form>
+    </div>
+</div>
                                 <p class="text-muted mb-1">{{ note.content }}</p>
                                 <small class="text-muted">
                                     <i class="bi bi-clock"></i>

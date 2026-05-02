@@ -98,6 +98,12 @@ async function send() {
         console.error(err);
     }
 }
+    document.getElementById("input").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+        e.preventDefault(); // щоб не було переносу/перезавантаження
+        send();
+    }
+});
 </script>
 
 {% endblock %}

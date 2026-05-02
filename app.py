@@ -1003,16 +1003,25 @@ def global_search():
                                accommodations=[])
 
     # Пошук в нижньому регістрі
-    search_term = f"%{query.lower()}%"
+    words = query.lower().split()
+    words = [word for word in words if word not in ['в', 'у', 'до', 'на', 'по', 'і']]
 
     # Пошук поїздок
+    trip_filters = []
+
+    for word in words:
+        search_term = f"%{word}%"
+        trip_filters.append(
+            db.or_(
+                Trip.title.ilike(search_term),
+                Trip.destination.ilike(search_term)
+            )
+        )
+
     trips = Trip.query.filter(
         Trip.user_id == current_user.id
     ).filter(
-        db.or_(
-            Trip.title.ilike(search_term),
-            Trip.destination.ilike(search_term)
-        )
+        db.or_(*trip_filters)
     ).all()
 
     # Пошук активностей
