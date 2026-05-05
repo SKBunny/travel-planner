@@ -1,21 +1,21 @@
-from flask import Flask, render_template, redirect, url_for, flash, request
+from flask import Flask, render_template, redirect, url_for, flash, request, send_file, send_from_directory, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
-from reportlab.lib.pagesizes import A4, letter
+from io import BytesIO
+
+from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.lib.enums import TA_CENTER
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from io import BytesIO
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file, send_from_directory, session, jsonify, render_template
-from flask import send_from_directory
-import requests
+
 from dotenv import load_dotenv
+import requests
 import os
 import google.generativeai as genai
 
@@ -87,9 +87,6 @@ ACHIEVEMENTS = {
 
 def check_achievements(user_id):
     """Перевіряє та розблоковує досягнення"""
-    from datetime import datetime, date
-
-    user = User.query.get(user_id)
     trips = Trip.query.filter_by(user_id=user_id).all()
 
     new_achievements = []
@@ -168,23 +165,6 @@ def get_user_level(user_id):
     else:
         return {'level': 'Новачок', 'icon': '🌱', 'color': '#a0aec0', 'next': 1}
 
-
-def transliterate(text):
-    """Транслітерація українського тексту для PDF"""
-    if not text:
-        return text
-
-    translit_dict = {
-        'а': 'a', 'б': 'b', 'в': 'v', 'г': 'h', 'ґ': 'g', 'д': 'd', 'е': 'e', 'є': 'ie',
-        'ж': 'zh', 'з': 'z', 'и': 'y', 'і': 'i', 'ї': 'i', 'й': 'i', 'к': 'k', 'л': 'l',
-        'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
-        'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch', 'ь': '', 'ю': 'iu', 'я': 'ia',
-        'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'H', 'Ґ': 'G', 'Д': 'D', 'Е': 'E', 'Є': 'Ie',
-        'Ж': 'Zh', 'З': 'Z', 'И': 'Y', 'І': 'I', 'Ї': 'I', 'Й': 'I', 'К': 'K', 'Л': 'L',
-        'М': 'M', 'Н': 'N', 'О': 'O', 'П': 'P', 'Р': 'R', 'С': 'S', 'Т': 'T', 'У': 'U',
-        'Ф': 'F', 'Х': 'Kh', 'Ц': 'Ts', 'Ч': 'Ch', 'Ш': 'Sh', 'Щ': 'Shch', 'Ь': '', 'Ю': 'Iu', 'Я': 'Ia',
-        '✈': '', '️': '', '📅': '', '🎒': '', '📝': '', '✓': 'V', '☐': '[ ]'
-    }
 
     result = []
     for char in text:
@@ -536,8 +516,6 @@ def dashboard():
     total_accommodations = len(all_accommodations)
 
     # Майбутні поїздки
-    from datetime import datetime, date
-    today = date.today()
     upcoming_trips = []
     past_trips = []
     for trip in trips:
@@ -1253,9 +1231,6 @@ def new_trip():
         db.session.add(new_trip)
         db.session.commit()
 
-        db.session.add(new_trip)
-        db.session.commit()
-
         # Перевірка досягнень
         new_badges = check_achievements(current_user.id)
 
@@ -1265,9 +1240,6 @@ def new_trip():
         for badge in new_badges:
             flash(f"🏆 Нове досягнення: {badge['icon']} {badge['name']}!", 'info')
 
-        return redirect(url_for('dashboard'))
-
-        flash('Поїздку створено!', 'success')
         return redirect(url_for('dashboard'))
 
     return render_template('new_trip.html',
@@ -3276,6 +3248,87 @@ def delete_account():
     flash('Ваш акаунт було видалено', 'info')
     return redirect(url_for('index'))
 
+def get_user_trips_context(user_id):
+    trips = Trip.query.filter_by(user_id=user_id).order_by(Trip.start_date.desc()).all()
+
+    if not trips:
+        return "У користувача поки немає створених поїздок."
+
+    result = []
+    for trip in trips:
+        result.append(
+            f"- Назва: {trip.title}\n"
+            f"  Напрямок: {trip.destination}\n"
+            f"  Дати: {trip.start_date.strftime('%d.%m.%Y')} - {trip.end_date.strftime('%d.%m.%Y')}\n"
+            f"  Бюджет: {trip.budget} {trip.currency}"
+        )
+
+    return "\n".join(result)
+
+
+def get_trip_full_context(user_id, user_message):
+    trip = Trip.query.filter(
+        Trip.user_id == user_id,
+        db.or_(
+            Trip.title.ilike(f"%{user_message}%"),
+            Trip.destination.ilike(f"%{user_message}%")
+        )
+    ).first()
+
+    if not trip:
+        return "Конкретну поїздку за повідомленням користувача не знайдено."
+
+    activities = Activity.query.filter_by(trip_id=trip.id).all()
+    notes = TripNote.query.filter_by(trip_id=trip.id).all()
+    transports = Transport.query.filter_by(trip_id=trip.id).all()
+
+    total_activities_cost = sum(activity.cost or 0 for activity in activities)
+    total_transport_cost = sum(transport.cost or 0 for transport in transports)
+    total_spent = total_activities_cost + total_transport_cost
+    remaining = trip.budget - total_spent
+
+    context = f"""
+Назва поїздки: {trip.title}
+Напрямок: {trip.destination}
+Дати: {trip.start_date.strftime('%d.%m.%Y')} - {trip.end_date.strftime('%d.%m.%Y')}
+Бюджет: {trip.budget} {trip.currency}
+Витрачено: {total_spent} {trip.currency}
+Залишок: {remaining} {trip.currency}
+
+Маршрути:
+"""
+
+    if transports:
+        for transport in transports:
+            context += f"- {transport.from_location} → {transport.to_location}, {transport.departure_date.strftime('%d.%m.%Y %H:%M')}"
+            if transport.cost:
+                context += f", вартість: {transport.cost} {trip.currency}"
+            context += "\n"
+    else:
+        context += "Маршрути не додані.\n"
+
+    context += "\nАктивності:\n"
+    if activities:
+        for activity in activities:
+            context += f"- {activity.title}"
+            if activity.date:
+                context += f", дата: {activity.date.strftime('%d.%m.%Y')}"
+            if activity.location:
+                context += f", місце: {activity.location}"
+            if activity.cost:
+                context += f", вартість: {activity.cost} {trip.currency}"
+            context += "\n"
+    else:
+        context += "Активності не додані.\n"
+
+    context += "\nНотатки:\n"
+    if notes:
+        for note in notes:
+            context += f"- {note.title}: {note.content}\n"
+    else:
+        context += "Нотатки не додані.\n"
+
+    return context
 
 @app.route("/ai")
 def ai_page():
@@ -3289,21 +3342,23 @@ genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel(
     model_name="gemini-2.5-flash-lite", # Lite версія значно швидша
     system_instruction= (
-    "Ти — 'TravelAI', персональний інтелектуальний travel-асистент. "
+    "Ти — 'TravelAI', персональний travel-асистент. "
     "Твій стиль: привітний, натхненний, але лаконічний. "
     "Твої правила:\n"
     "1. Відповідай українською мовою.\n"
     "2. Форматуй відповіді: використовуй жирний текст для назв локацій та марковані списки для маршрутів.\n"
     "3. Якщо користувач питає про подорож з України, враховуй сучасні логістичні реалії (автобуси, поїзди до Перемишля/Варшави, вильоти з найближчих аеропортів сусідніх країн).\n"
     "4. Завжди додавай одну цікаву 'фішку' про місце (наприклад, секретний дворик або найкращу каву).\n"
+    "5. Відповідай тільки на питання які повʼязані з подорожами"
 )
 )
 
 
 @app.route("/api/ai", methods=["POST"])
+@login_required
 def ai():
     try:
-        user_message = request.json.get("message")
+        user_message = request.json.get("message", "").strip()
 
         if not GEMINI_API_KEY:
             return jsonify({"reply": "❌ Немає API ключа"}), 500
@@ -3311,17 +3366,40 @@ def ai():
         if not user_message:
             return jsonify({"reply": "❌ Повідомлення порожнє"}), 400
 
-        # Генерація відповіді
-        response = model.generate_content(user_message)
+        message_lower = user_message.lower()
+        db_context = ""
 
-        # Gemini повертає відповідь у полі .text
+        if any(word in message_lower for word in ["мої поїздки", "поїздки", "подорожі", "маршрути"]):
+            db_context += get_user_trips_context(current_user.id)
+
+        if any(word in message_lower for word in ["бюджет", "активності", "нотатки", "витрати", "залишок", "проаналізуй"]):
+            db_context += "\n\n" + get_trip_full_context(current_user.id, user_message)
+
+        final_prompt = f"""
+Користувач звертається до AI-асистента TravelPlanner.
+
+Дані з бази користувача:
+{db_context if db_context else "Дані з бази не знайдені або не потрібні для цього запиту."}
+
+Повідомлення користувача:
+{user_message}
+
+Правила:
+- Якщо є дані з бази, використовуй їх як основне джерело.
+- Не вигадуй поїздки, бюджети, маршрути або активності.
+- Якщо інформації недостатньо, чесно скажи про це.
+- Відповідай українською мовою.
+"""
+
+        response = model.generate_content(final_prompt)
+
         return jsonify({
             "reply": response.text
         })
 
     except Exception as e:
         print("GEMINI ERROR:", e)
-        return jsonify({"reply": f"⚠️ Помилка сервера: {str(e)}"}), 500
+        return jsonify({"reply": "⚠️ Помилка сервера. Спробуйте ще раз пізніше."}), 500
 # ============= ЗАПУСК ДОДАТКУ =============
 
 if __name__ == '__main__':
@@ -3333,4 +3411,3 @@ if __name__ == '__main__':
     # Запуск сервера
     app.run(debug=True, host='0.0.0.0', port=5001)
 
-    

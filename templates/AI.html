@@ -25,58 +25,63 @@
 
     </div>
 </div>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
 <script>
+const messages = document.getElementById("messages");
+const input = document.getElementById("input");
 
 function addMessage(text, type) {
-    // 1. Шукаємо контейнер (спробуємо різні варіанти назв)
-    const chatContainer = document.getElementById("chat-messages") ||
-                          document.getElementById("messages") ||
-                          document.querySelector(".messages-container");
-
-    if (!chatContainer) {
-        console.error("Помилка: Не знайдено блок для чату в HTML!");
-        return;
-    }
-
-    // 2. Створюємо елемент повідомлення
     const messageElement = document.createElement("div");
-    messageElement.classList.add("message", type);
 
-    // Стилі для того, щоб повідомлення було видно (якщо CSS підкачав)
+    messageElement.classList.add("message", type);
     messageElement.style.marginBottom = "10px";
     messageElement.style.padding = "10px";
     messageElement.style.borderRadius = "8px";
     messageElement.style.backgroundColor = type === "user" ? "#e1f5fe" : "#f1f1f1";
 
-    // 3. Додаємо контент
     if (type === "bot" && typeof marked !== "undefined") {
-        try {
-            messageElement.innerHTML = marked.parse(text);
-        } catch (e) {
-            messageElement.innerText = text; // якщо marked зламався
-        }
+        messageElement.innerHTML = marked.parse(text);
     } else {
         messageElement.innerText = text;
     }
 
-    // 4. Додаємо в контейнер
-    chatContainer.appendChild(messageElement);
-
-    // 5. Прокрутка
-    chatContainer.scrollTop = chatContainer.scrollHeight;
+    messages.appendChild(messageElement);
+    messages.scrollTop = messages.scrollHeight;
 }
 
-// Твоя функція send, вона має бути такою:
+function showTyping() {
+    removeTyping();
+
+    const typingElement = document.createElement("div");
+    typingElement.id = "typing-message";
+    typingElement.style.marginBottom = "10px";
+    typingElement.style.padding = "10px";
+    typingElement.style.borderRadius = "8px";
+    typingElement.style.backgroundColor = "#f1f1f1";
+    typingElement.style.color = "#6c757d";
+    typingElement.innerText = "🤖 Бот друкує...";
+
+    messages.appendChild(typingElement);
+    messages.scrollTop = messages.scrollHeight;
+}
+
+function removeTyping() {
+    const typingElement = document.getElementById("typing-message");
+    if (typingElement) {
+        typingElement.remove();
+    }
+}
+
 async function send() {
-    const input = document.getElementById("input");
     const text = input.value.trim();
 
     if (!text) return;
 
     addMessage(text, "user");
     input.value = "";
+
+    showTyping();
 
     try {
         const res = await fetch("/api/ai", {
@@ -87,20 +92,23 @@ async function send() {
 
         const data = await res.json();
 
+        removeTyping();
+
         if (data.reply) {
             addMessage(data.reply, "bot");
         } else {
-            throw new Error("Немає відповіді від сервера");
+            addMessage("⚠️ Немає відповіді від сервера", "bot");
         }
 
     } catch (err) {
+        removeTyping();
         addMessage("⚠️ Помилка: " + err.message, "bot");
-        console.error(err);
     }
 }
-    document.getElementById("input").addEventListener("keydown", function(e) {
+
+input.addEventListener("keydown", function(e) {
     if (e.key === "Enter") {
-        e.preventDefault(); // щоб не було переносу/перезавантаження
+        e.preventDefault();
         send();
     }
 });
