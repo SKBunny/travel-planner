@@ -6,7 +6,7 @@
  <div class="mb-4">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
         <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Назад до поїздок
+            <i class="bi bi-arrow-left"></i> Назад до подорожей
         </a>
 
         <div class="d-flex flex-wrap gap-2">
@@ -41,7 +41,7 @@
     </div>
 </div>
 
-<!-- Основна інформація про поїздку -->
+<!-- Основна інформація про подорож -->
 <div class="card shadow-sm mb-4">
     <div class="card-header bg-primary text-white">
         <h2 class="mb-0">{{ trip.title }}</h2>
@@ -133,10 +133,10 @@
     </div>
 </div>
 {% endif %}
-<!-- Міста поїздки -->
+<!-- Міста подорожі -->
 <div class="card shadow-sm mb-4">
     <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="bi bi-geo-alt"></i> Міста поїздки</h5>
+        <h5 class="mb-0"><i class="bi bi-geo-alt"></i> Міста подорожі</h5>
         <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#addDestinationModal">
             <i class="bi bi-plus-circle"></i> Додати місто
         </button>
@@ -547,7 +547,7 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 
-<!-- Modal для видалення поїздки -->
+<!-- Modal для видалення подорожі -->
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -556,7 +556,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                Ви впевнені, що хочете видалити поїздку "<strong>{{ trip.title }}</strong>"?
+                Ви впевнені, що хочете видалити подорож "<strong>{{ trip.title }}</strong>"?
                 Всі активності також будуть видалені. Цю дію неможливо скасувати.
             </div>
             <div class="modal-footer">

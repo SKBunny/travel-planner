@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Редагувати поїздку - Travel Planner{% endblock %}
+{% block title %}Редагувати подорож - Travel Planner{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -8,7 +8,7 @@
         <div class="card">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="card-title mb-0">Редагувати поїздку</h2>
+                    <h2 class="card-title mb-0">Редагувати подорож</h2>
                     <a href="{{ url_for('view_trip', trip_id=trip.id) }}" class="btn btn-outline-secondary">
                         Скасувати
                     </a>
@@ -16,7 +16,7 @@
                 
                 <form method="POST">
                     <div class="mb-3">
-                        <label for="title" class="form-label">Назва поїздки</label>
+                        <label for="title" class="form-label">Назва подорожі</label>
                         <input type="text" class="form-control" id="title" name="title" 
                                value="{{ trip.title }}" required>
                     </div>

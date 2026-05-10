@@ -9,7 +9,7 @@
     <div class="col-md-8">
         <div class="mb-3">
             <a href="{{ url_for('view_trip', trip_id=trip.id) }}" class="btn btn-outline-secondary">
-                ← Назад до поїздки
+                ← Назад до подорожі
             </a>
         </div>
         
@@ -22,7 +22,7 @@
                         Додати нову активність
                     {% endif %}
                 </h2>
-                <p class="text-muted">Поїздка: <strong>{{ trip.title }}</strong></p>
+                <p class="text-muted">Подорож: <strong>{{ trip.title }}</strong></p>
                 
                 <form method="POST">
                     <div class="mb-3">

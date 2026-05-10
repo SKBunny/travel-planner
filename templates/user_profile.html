@@ -35,7 +35,7 @@
                     </div>
                     <div class="stat-content">
                         <h3 class="mb-0">{{ total_trips }}</h3>
-                        <p class="text-muted mb-0">{{ total_trips|plural('Поїздка', 'Поїздки', 'Поїздок') }}</p>
+                        <p class="text-muted mb-0">{{ total_trips|plural('Подорож', 'Подорожі', 'Подорожей') }}</p>
                     </div>
                 </div>
                 <hr>
@@ -65,7 +65,7 @@
         {% if recent_trips %}
         <div class="card shadow-sm mt-4">
             <div class="card-header bg-light">
-                <h6 class="mb-0"><i class="bi bi-clock-history"></i> Останні поїздки</h6>
+                <h6 class="mb-0"><i class="bi bi-clock-history"></i> Останні подорожі</h6>
             </div>
             <div class="list-group list-group-flush">
                 {% for trip in recent_trips %}
@@ -186,7 +186,7 @@
                 <p><strong>УВАГА!</strong> Ця дія незворотна!</p>
                 <p>Будуть видалені:</p>
                 <ul>
-                    <li>Всі ваші поїздки ({{ total_trips }})</li>
+                    <li>Всі ваші подорожі ({{ total_trips }})</li>
                     <li>Всі активності ({{ total_activities }})</li>
                     <li>Списки речей</li>
                     <li>Готелі та бронювання</li>

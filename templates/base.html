@@ -197,8 +197,8 @@
                 <ul class="footer-links">
                     <li><a href="{{ url_for('index') }}">Головна</a></li>
                     {% if current_user.is_authenticated %}
-                        <li><a href="{{ url_for('my_trips') }}">Мої поїздки</a></li>
-                        <li><a href="{{ url_for('new_trip') }}">Нова поїздка</a></li>
+                        <li><a href="{{ url_for('my_trips') }}">Мої подорожі</a></li>
+                        <li><a href="{{ url_for('new_trip') }}">Нова подорож</a></li>
                     {% else %}
                         <li><a href="{{ url_for('login') }}">Вхід</a></li>
                         <li><a href="{{ url_for('register') }}">Реєстрація</a></li>

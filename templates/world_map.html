@@ -33,7 +33,7 @@
             <div class="card-body">
                 <i class="bi bi-airplane" style="font-size: 2.5rem; color: #f6ad55;"></i>
                 <h3 class="mt-2 mb-0">{{ total_trips }}</h3>
-                <p class="mb-0 text-muted">Всього поїздок</p>
+                <p class="mb-0 text-muted">Всього подорожей</p>
             </div>
         </div>
     </div>
@@ -88,7 +88,7 @@
                     <div class="list-group-item d-flex justify-content-between align-items-center">
                         <div>
                             <strong>{{ country_data.country }}</strong><br>
-                            <small class="text-muted">{{ country_data.trips|length }} поїздок</small>
+                            <small class="text-muted">{{ country_data.trips|length }} подорожей</small>
                         </div>
                         <span class="badge rounded-pill" style="background: #667eea;">✓</span>
                     </div>
@@ -119,7 +119,7 @@
                     {% endfor %}
                 </div>
                 {% else %}
-                <p class="text-muted text-center">Немає запланованих поїздок</p>
+                <p class="text-muted text-center">Немає запланованих подорожей</p>
                 {% endif %}
             </div>
         </div>

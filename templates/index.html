@@ -7,12 +7,12 @@
 <div class="hero-section text-center">
     <div class="hero-content">
         <h1 class="display-4 fw-bold mb-4">Плануйте свої подорожі легко</h1>
-        <p class="lead mb-4">Всі ваші поїздки в одному місці. Організуйте, контролюйте бюджет, насолоджуйтесь!</p>
+        <p class="lead mb-4">Всі ваші подорожі в одному місці. Організуйте, контролюйте бюджет, насолоджуйтесь!</p>
 
         <div class="d-flex gap-3 justify-content-center flex-wrap">
             {% if current_user.is_authenticated %}
                 <a href="{{ url_for('my_trips') }}" class="btn btn-light btn-lg px-5">
-                    <i class="bi bi-suitcase-lg"></i> Мої поїздки
+                    <i class="bi bi-suitcase-lg"></i> Мої подорожі
                 </a>
                 <a href="{{ url_for('new_trip') }}" class="btn btn-outline-light btn-lg px-5">
                     <i class="bi bi-plus-circle"></i> Нова подорож

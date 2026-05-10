@@ -19,10 +19,10 @@
             <div class="card-body py-4">
                 <div style="font-size: 4rem;">{{ user_level.icon }}</div>
                 <h2 class="text-white mb-2">{{ user_level.level }}</h2>
-                <p class="text-white mb-3 opacity-75">{{ trips_count }} {{ trips_count|plural('поїздка', 'поїздки', 'поїздок') }}</p>
+                <p class="text-white mb-3 opacity-75">{{ trips_count }} {{ trips_count|plural('подорож', 'подорожі', 'подорожей') }}</p>
                 
                 {% if user_level.next %}
-                    <p class="text-white small mb-2">До наступного рівня: {{ user_level.next - trips_count }} {{ (user_level.next - trips_count)|plural('поїздка', 'поїздки', 'поїздок') }}</p>
+                    <p class="text-white small mb-2">До наступного рівня: {{ user_level.next - trips_count }} {{ (user_level.next - trips_count)|plural('подорож', 'подорожі', 'подорожей') }}</p>
                     <div class="progress" style="height: 20px; background: rgba(255,255,255,0.3);">
                         <div class="progress-bar" role="progressbar" style="width: {{ progress }}%; background: white;">
                             {{ "%.0f"|format(progress) }}%
@@ -47,7 +47,7 @@
                 <div class="p-3">
                     <i class="bi bi-suitcase-lg" style="font-size: 2.5rem; color: #667eea;"></i>
                     <h3 class="mt-2 mb-0">{{ year_stats.trips }}</h3>
-                    <p class="text-muted mb-0">{{ year_stats.trips|plural('Поїздка', 'Поїздки', 'Поїздок') }}</p>
+                    <p class="text-muted mb-0">{{ year_stats.trips|plural('Подорож', 'Подорожі', 'Подорожей') }}</p>
                 </div>
             </div>
             <div class="col-md-4 mb-3">

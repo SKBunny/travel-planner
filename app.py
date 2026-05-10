@@ -30,7 +30,7 @@ WEATHER_ENABLED = os.getenv('WEATHER_ENABLED', 'True') == 'True'
 ACHIEVEMENTS = {
     'first_trip': {
         'name': 'Перша подорож',
-        'description': 'Створіть свою першу поїздку',
+        'description': 'Створіть свою першу подорож',
         'icon': '🎉',
         'color': '#48bb78'
     },
@@ -66,7 +66,7 @@ ACHIEVEMENTS = {
     },
     'budget_master': {
         'name': 'Економний',
-        'description': 'Завершіть поїздку в межах бюджету',
+        'description': 'Завершіть подорож в межах бюджету',
         'icon': '💰',
         'color': '#48bb78'
     },
@@ -515,7 +515,7 @@ def dashboard():
     all_accommodations = Accommodation.query.join(Trip).filter(Trip.user_id == current_user.id).all()
     total_accommodations = len(all_accommodations)
 
-    # Майбутні поїздки
+    # Майбутні подорожі
     upcoming_trips = []
     past_trips = []
     for trip in trips:
@@ -601,7 +601,7 @@ def dashboard():
 def world_map():
     from datetime import date
 
-    # Всі поїздки користувача
+    # Всі подорожі користувача
     trips = Trip.query.filter_by(user_id=current_user.id).all()
 
     # Отримуємо вручну відмічені країни з БД
@@ -622,7 +622,7 @@ def world_map():
 
     today = date.today()
 
-    # Обробляємо поїздки
+    # Обробляємо подорожі
     for trip in trips:
         destination_parts = trip.destination.split(',')
         country = destination_parts[-1].strip() if len(destination_parts) > 1 else trip.destination.strip()
@@ -630,7 +630,7 @@ def world_map():
         trip_end = trip.end_date.date() if hasattr(trip.end_date, 'date') else trip.end_date
 
         if trip_end < today:
-            # Відвідано через поїздку
+            # Відвідано через подорожі
             if country not in visited:
                 visited[country] = []
             visited[country].append({
@@ -638,7 +638,7 @@ def world_map():
                 'date': trip.start_date.strftime('%d.%m.%Y')
             })
         else:
-            # Заплановано через поїздку
+            # Заплановано через подорожі
             # НЕ додаємо якщо вручну вже відмічено як visited
             if country not in manual_visited and country not in planned:
                 planned[country] = {
@@ -690,7 +690,7 @@ def world_map():
                            visited_country_names=visited_country_names,
                            planned_country_names=planned_country_names)
 
-# Мої поїздки (окрема сторінка)
+# Мої подорожі (окрема сторінка)
 @app.route('/my-trips')
 @login_required
 def my_trips():
@@ -701,7 +701,7 @@ def my_trips():
     sort_by = request.args.get('sort', 'date_desc')
     filter_status = request.args.get('status', 'all')
 
-    # Отримуємо всі поїздки користувача
+    # Отримуємо всі подорожі користувача
     all_user_trips = Trip.query.filter_by(user_id=current_user.id).all()
 
     # Пошук
@@ -754,20 +754,20 @@ def trip_calendar():
     year = int(request.args.get('year', datetime.now().year))
     month = int(request.args.get('month', datetime.now().month))
 
-    # Отримуємо всі поїздки користувача
+    # Отримуємо всі подорожі користувача
     trips = Trip.query.filter_by(user_id=current_user.id).all()
 
     # Створюємо календар
     month_calendar = cal.monthcalendar(year, month)
     month_name = cal.month_name[month]
 
-    # Знаходимо поїздки для кожного дня місяця
+    # Знаходимо подорожі для кожного дня місяця
     trips_by_date = {}
     for trip in trips:
         start = trip.start_date.date() if isinstance(trip.start_date, datetime) else trip.start_date
         end = trip.end_date.date() if isinstance(trip.end_date, datetime) else trip.end_date
 
-        # Додаємо поїздку до всіх днів між start та end
+        # Додаємо подорожі до всіх днів між start та end
         current_date = start
         while current_date <= end:
             if current_date.year == year and current_date.month == month:
@@ -1183,7 +1183,7 @@ def currency_converter():
                            live_rates=live_rates is not None)
 
 
-# Створення поїздки
+# Створення подорожі
 @app.route('/trip/new', methods=['GET', 'POST'])
 @login_required
 def new_trip():
@@ -1234,7 +1234,7 @@ def new_trip():
         # Перевірка досягнень
         new_badges = check_achievements(current_user.id)
 
-        flash('Поїздку створено!', 'success')
+        flash('Подорож створено!', 'success')
 
         # Повідомлення про нові досягнення
         for badge in new_badges:
@@ -1320,7 +1320,7 @@ def view_trip(trip_id):
     trip = Trip.query.get_or_404(trip_id)
 
     if trip.user_id != current_user.id:
-        flash('У вас немає доступу до цієї поїздки', 'danger')
+        flash('У вас немає доступу до цієї подорожі', 'danger')
         return redirect(url_for('dashboard'))
 
     # Групуємо активності по днях
@@ -1347,14 +1347,14 @@ def view_trip(trip_id):
                            weather=weather,
                            weather_forecast=weather_forecast)
 
-# Зберегти поїздку як шаблон
+# Зберегти подорож як шаблон
 @app.route('/trip/<int:trip_id>/save-as-template', methods=['GET', 'POST'])
 @login_required
 def save_as_template(trip_id):
     trip = Trip.query.get_or_404(trip_id)
 
     if trip.user_id != current_user.id:
-        flash('У вас немає доступу до цієї поїздки', 'danger')
+        flash('У вас немає доступу до цієї подорожі', 'danger')
         return redirect(url_for('dashboard'))
 
     if request.method == 'POST':
@@ -1426,7 +1426,7 @@ def templates_list():
                            public_templates=public_templates)
 
 
-# Створити поїздку з шаблону
+# Створити подорож з шаблону
 @app.route('/templates/<int:template_id>/use', methods=['GET', 'POST'])
 @login_required
 def use_template(template_id):
@@ -1446,7 +1446,7 @@ def use_template(template_id):
         start_date = datetime.strptime(request.form.get('start_date'), '%Y-%m-%d').date()
         budget = float(request.form.get('budget'))
 
-        # Створюємо нову поїздку
+        # Створюємо нову подорож
         end_date = start_date + timedelta(days=template.duration_days - 1)
 
         new_trip = Trip(
@@ -1460,7 +1460,7 @@ def use_template(template_id):
         )
 
         db.session.add(new_trip)
-        db.session.flush()  # Отримуємо ID нової поїздки
+        db.session.flush()  # Отримуємо ID нової подорожі
 
         # Додаємо активності з шаблону
         if template.activities_template:
@@ -1504,7 +1504,7 @@ def use_template(template_id):
 
         db.session.commit()
 
-        flash(f'Поїздку "{title}" створено з шаблону!', 'success')
+        flash(f'Подорож "{title}" створено з шаблону!', 'success')
         return redirect(url_for('view_trip', trip_id=new_trip.id))
 
     return render_template('use_template.html',
@@ -1512,7 +1512,7 @@ def use_template(template_id):
                            currency_symbols=CURRENCY_SYMBOLS)
 
 
-# Нотатки для поїздки
+# Нотатки для подорожі
 class TripNote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
@@ -1534,7 +1534,7 @@ def export_trip_pdf(trip_id):
     trip = Trip.query.get_or_404(trip_id)
 
     if trip.user_id != current_user.id:
-        flash('У вас немає доступу до цієї поїздки', 'danger')
+        flash('У вас немає доступу до цієї подорожі', 'danger')
         return redirect(url_for('dashboard'))
 
     buffer = BytesIO()
@@ -1669,12 +1669,12 @@ def export_trip_pdf(trip_id):
     elements.append(info_card)
     elements.append(Spacer(1, 1 * cm))
 
-    # ========== МІСТА ПОЇЗДКИ ==========
+    # ========== МІСТА ПОДОРОЖІ ==========
 
     destinations = TripDestination.query.filter_by(trip_id=trip_id).order_by(TripDestination.order).all()
 
     if destinations:
-        elements.append(Paragraph("МІСТА ПОЇЗДКИ", heading_style))
+        elements.append(Paragraph("МІСТА ПОДОРОЖІ", heading_style))
         elements.append(Spacer(1, 0.3 * cm))
 
         dest_data = []
@@ -1937,7 +1937,7 @@ def export_trip_pdf(trip_id):
         download_name=filename
     )
 
-# Чекліст для поїздки (віза, страховка тощо)
+# Чекліст для подорожі (віза, страховка тощо)
 class TripChecklist(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     item = db.Column(db.String(200), nullable=False)
@@ -2105,7 +2105,7 @@ def set_country_status():
 
 # ==================== НАПРЯМКИ (МІСТА) ====================
 
-# Додати місто до поїздки
+# Додати місто до подорожі
 @app.route('/trip/<int:trip_id>/destination/add', methods=['POST'])
 @login_required
 def add_destination(trip_id):
@@ -2327,7 +2327,7 @@ def delete_template(template_id):
     flash('Шаблон видалено', 'info')
     return redirect(url_for('templates_list'))
 
-# Редагування поїздки
+# Редагування подорожі
 @app.route('/trip/<int:trip_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_trip(trip_id):
@@ -2335,7 +2335,7 @@ def edit_trip(trip_id):
 
     # Перевірка доступу
     if trip.user_id != current_user.id:
-        flash('У вас немає доступу до цієї поїздки', 'danger')
+        flash('У вас немає доступу до цієї подорожі', 'danger')
         return redirect(url_for('dashboard'))
 
     if request.method == 'POST':
@@ -2371,7 +2371,7 @@ def edit_trip(trip_id):
             trip.budget = budget
 
             db.session.commit()
-            flash('Поїздку оновлено!', 'success')
+            flash('Подорож оновлено!', 'success')
             return redirect(url_for('view_trip', trip_id=trip.id))
 
         except ValueError:
@@ -2390,7 +2390,7 @@ def trip_notes(trip_id):
     trip = Trip.query.get_or_404(trip_id)
 
     if trip.user_id != current_user.id:
-        flash('У вас немає доступу до цієї поїздки', 'danger')
+        flash('У вас немає доступу до цієї подорожі', 'danger')
         return redirect(url_for('dashboard'))
 
     notes = TripNote.query.filter_by(trip_id=trip_id).order_by(TripNote.is_pinned.desc(),
@@ -2439,7 +2439,7 @@ def add_note(trip_id):
     trip = Trip.query.get_or_404(trip_id)
 
     if trip.user_id != current_user.id:
-        flash('У вас немає доступу до цієї поїздки', 'danger')
+        flash('У вас немає доступу до цієї подорожі', 'danger')
         return redirect(url_for('dashboard'))
 
     title = request.form.get('title')
@@ -2552,7 +2552,7 @@ def delete_checklist_item(trip_id, item_id):
     flash('Пункт видалено', 'info')
     return redirect(url_for('trip_notes', trip_id=trip_id))
 
-# Видалення поїздки
+# Видалення подорожі
 @app.route('/trip/<int:trip_id>/delete', methods=['POST'])
 @login_required
 def delete_trip(trip_id):
@@ -2560,13 +2560,13 @@ def delete_trip(trip_id):
 
     # Перевірка доступу
     if trip.user_id != current_user.id:
-        flash('У вас немає доступу до цієї поїздки', 'danger')
+        flash('У вас немає доступу до цієї подорожі', 'danger')
         return redirect(url_for('dashboard'))
 
     db.session.delete(trip)
     db.session.commit()
 
-    flash('Поїздку видалено', 'info')
+    flash('Подорож видалено', 'info')
     return redirect(url_for('dashboard'))
 
 
@@ -2577,7 +2577,7 @@ def new_activity(trip_id):
     trip = Trip.query.get_or_404(trip_id)
 
     if trip.user_id != current_user.id:
-        flash('У вас немає доступу до цієї поїздки', 'danger')
+        flash('У вас немає доступу до цієї подорожі', 'danger')
         return redirect(url_for('dashboard'))
 
     if request.method == 'POST':
@@ -2596,9 +2596,9 @@ def new_activity(trip_id):
         try:
             date = datetime.strptime(date_str, '%Y-%m-%d')
 
-            # Перевірка, чи дата в межах поїздки
+            # Перевірка, чи дата в межах подорожі
             if date.date() < trip.start_date.date() or date.date() > trip.end_date.date():
-                flash('Дата активності повинна бути в межах дат поїздки', 'danger')
+                flash('Дата активності повинна бути в межах дат подорожі', 'danger')
                 return render_template('activity_form.html', trip=trip)
 
             cost = float(cost_str)
@@ -2655,7 +2655,7 @@ def edit_activity(trip_id, activity_id):
             date = datetime.strptime(date_str, '%Y-%m-%d')
 
             if date.date() < trip.start_date.date() or date.date() > trip.end_date.date():
-                flash('Дата активності повинна бути в межах дат поїздки', 'danger')
+                flash('Дата активності повинна бути в межах дат подорожі', 'danger')
                 return render_template('activity_form.html', trip=trip, activity=activity)
 
             cost = float(cost_str)
@@ -2715,14 +2715,14 @@ def toggle_activity(trip_id, activity_id):
     return redirect(url_for('view_trip', trip_id=trip.id))
 
 
-# Статистика поїздки
+# Статистика подорожі
 @app.route('/trip/<int:trip_id>/statistics')
 @login_required
 def trip_statistics(trip_id):
     trip = Trip.query.get_or_404(trip_id)
 
     if trip.user_id != current_user.id:
-        flash('У вас немає доступу до цієї поїздки', 'danger')
+        flash('У вас немає доступу до цієї подорожі', 'danger')
         return redirect(url_for('dashboard'))
 
     # Витрати з активностей
@@ -2858,7 +2858,7 @@ def packing_list(trip_id):
     trip = Trip.query.get_or_404(trip_id)
 
     if trip.user_id != current_user.id:
-        flash('У вас немає доступу до цієї поїздки', 'danger')
+        flash('У вас немає доступу до цієї подорожі', 'danger')
         return redirect(url_for('dashboard'))
 
     # Групуємо речі по категоріях
@@ -2894,7 +2894,7 @@ def add_packing_item(trip_id):
     trip = Trip.query.get_or_404(trip_id)
 
     if trip.user_id != current_user.id:
-        flash('У вас немає доступу до цієї поїздки', 'danger')
+        flash('У вас немає доступу до цієї подорожі', 'danger')
         return redirect(url_for('dashboard'))
 
     name = request.form.get('name', '').strip()
@@ -2971,7 +2971,7 @@ def clear_packed_items(trip_id):
     return redirect(url_for('packing_list', trip_id=trip.id))
 
 
-# Модель шаблону поїздки
+# Модель шаблону подорожі
 class TripTemplate(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
@@ -2982,7 +2982,7 @@ class TripTemplate(db.Model):
     currency = db.Column(db.String(3), default='UAH')
     is_public = db.Column(db.Boolean, default=False)  # Публічний шаблон чи особистий
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    source_trip_id = db.Column(db.Integer, db.ForeignKey('trip.id'), nullable=True)  # З якої поїздки створено
+    source_trip_id = db.Column(db.Integer, db.ForeignKey('trip.id'), nullable=True)  # З якої подорожі створено
     created_at = db.Column(db.DateTime, default=datetime.now)
 
     # Зберігаємо дані як JSON
@@ -2998,7 +2998,7 @@ def accommodations_list(trip_id):
     trip = Trip.query.get_or_404(trip_id)
 
     if trip.user_id != current_user.id:
-        flash('У вас немає доступу до цієї поїздки', 'danger')
+        flash('У вас немає доступу до цієї подорожі', 'danger')
         return redirect(url_for('dashboard'))
 
     accommodations = Accommodation.query.filter_by(trip_id=trip.id).order_by(Accommodation.check_in).all()
@@ -3021,7 +3021,7 @@ def add_accommodation(trip_id):
     trip = Trip.query.get_or_404(trip_id)
 
     if trip.user_id != current_user.id:
-        flash('У вас немає доступу до цієї поїздки', 'danger')
+        flash('У вас немає доступу до цієї подорожі', 'danger')
         return redirect(url_for('dashboard'))
 
     if request.method == 'POST':
@@ -3167,7 +3167,7 @@ def search_accommodations(trip_id):
     trip = Trip.query.get_or_404(trip_id)
 
     if trip.user_id != current_user.id:
-        flash('У вас немає доступу до цієї поїздки', 'danger')
+        flash('У вас немає доступу до цієї подорожі', 'danger')
         return redirect(url_for('dashboard'))
 
     return render_template('accommodations_search.html', trip=trip)
@@ -3224,7 +3224,7 @@ def user_profile():
     total_spent = db.session.query(db.func.sum(Activity.cost)).join(Trip).filter(
         Trip.user_id == current_user.id).scalar() or 0
 
-    # Останні поїздки
+    # Останні подорожі
     recent_trips = Trip.query.filter_by(user_id=current_user.id).order_by(Trip.created_at.desc()).limit(5).all()
 
     return render_template('user_profile.html',
@@ -3276,7 +3276,7 @@ def get_trip_full_context(user_id, user_message):
     ).first()
 
     if not trip:
-        return "Конкретну поїздку за повідомленням користувача не знайдено."
+        return "Конкретну подорож за повідомленням користувача не знайдено."
 
     activities = Activity.query.filter_by(trip_id=trip.id).all()
     notes = TripNote.query.filter_by(trip_id=trip.id).all()
@@ -3288,7 +3288,7 @@ def get_trip_full_context(user_id, user_message):
     remaining = trip.budget - total_spent
 
     context = f"""
-Назва поїздки: {trip.title}
+Назва подорожі: {trip.title}
 Напрямок: {trip.destination}
 Дати: {trip.start_date.strftime('%d.%m.%Y')} - {trip.end_date.strftime('%d.%m.%Y')}
 Бюджет: {trip.budget} {trip.currency}
@@ -3334,13 +3334,11 @@ def get_trip_full_context(user_id, user_message):
 def ai_page():
     return render_template("AI.html")
 
-# Налаштування Gemini (можна винести за межі маршруту)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 genai.configure(api_key=GEMINI_API_KEY)
 
-# Вибираємо модель (flash — найшвидша і безкоштовна)
 model = genai.GenerativeModel(
-    model_name="gemini-2.5-flash-lite", # Lite версія значно швидша
+    model_name="gemini-2.5-flash-lite",
     system_instruction= (
     "Ти — 'TravelAI', персональний travel-асистент. "
     "Твій стиль: привітний, натхненний, але лаконічний. "
@@ -3369,7 +3367,7 @@ def ai():
         message_lower = user_message.lower()
         db_context = ""
 
-        if any(word in message_lower for word in ["мої поїздки", "поїздки", "подорожі", "маршрути"]):
+        if any(word in message_lower for word in ["мої подорожі", "поїздки", "подорожі", "маршрути"]):
             db_context += get_user_trips_context(current_user.id)
 
         if any(word in message_lower for word in ["бюджет", "активності", "нотатки", "витрати", "залишок", "проаналізуй"]):
@@ -3386,7 +3384,7 @@ def ai():
 
 Правила:
 - Якщо є дані з бази, використовуй їх як основне джерело.
-- Не вигадуй поїздки, бюджети, маршрути або активності.
+- Не вигадуй подорожі, бюджети, маршрути або активності.
 - Якщо інформації недостатньо, чесно скажи про це.
 - Відповідай українською мовою.
 """
@@ -3400,14 +3398,13 @@ def ai():
     except Exception as e:
         print("GEMINI ERROR:", e)
         return jsonify({"reply": "⚠️ Помилка сервера. Спробуйте ще раз пізніше."}), 500
+
 # ============= ЗАПУСК ДОДАТКУ =============
 
 if __name__ == '__main__':
-    # Створення всіх таблиць в базі даних
     with app.app_context():
         db.create_all()
         print("База даних створена успішно!")
 
-    # Запуск сервера
     app.run(debug=True, host='0.0.0.0', port=5001)
 
